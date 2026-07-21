@@ -1,0 +1,19 @@
+{
+  "name": "abdul-portfolio-next",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "lucide-react": "^1.25.0",
+    "next": "16.2.10",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "react-icons": "^5.7.0",
+    "swiper": "^14.0.5"
+  }
+}
