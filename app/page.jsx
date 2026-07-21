@@ -22,11 +22,14 @@ const profile = {
   email: "abdulhanan04@icloud.com"
 };
 
+
 const stats = [
   ["Profile views", "900", "Discover who viewed your portfolio."],
   ["Post impressions", "11500", "Engagement from your latest AI posts."],
   ["Search appearances", "500", "How often you appear in recruiter searches."]
 ];
+
+// dummy activities
 
 const activities = [
   {
