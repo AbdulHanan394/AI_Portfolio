@@ -39,7 +39,6 @@ const activities = [
       "A breakdown of transformer architecture and where each model family shines in modern AI workflows.",
     tag: "AI Notes",
     image: "/linkedin-page.png"
-    
   },
   {
     title: "Activation Functions",
