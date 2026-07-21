@@ -1215,7 +1215,6 @@ I'm always exploring new technologies, solving challenging engineering problems,
       >
         <FaGithub size={22} />
       </a>
-
       <a
         href="https://x.com/AbdulHanan394"
         target="_blank"
