@@ -2178,3 +2178,25 @@ button.outline-pill {
     max-width: 92%;
   }
 }
+.markdown-content {
+  line-height: 1.6;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3 {
+  margin: 12px 0 8px;
+}
+
+.markdown-content ul {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.markdown-content li {
+  margin-bottom: 5px;
+}
+
+.markdown-content p {
+  margin-bottom: 12px;
+}

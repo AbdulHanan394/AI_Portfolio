@@ -1,13 +1,24 @@
 "use client";
-
+import Markdown from "react-markdown";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Copy, Send, Sparkles, Bot, Github, Linkedin, ChevronLeft, ChevronRight, X } from "lucide-react";
 import {
-  FaGithub,
-  FaLinkedin,
-  FaXTwitter,
-  FaEnvelope,
-} from "react-icons/fa6";
+  Copy,
+  Send,
+  Sparkles,
+  Bot,
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from "lucide-react";
+import { FaGithub, FaLinkedin, FaXTwitter, FaEnvelope } from "react-icons/fa6";
+import {
+  askAssistant,
+  getHealth,
+  listActivities,
+  listProjects,
+  unwrapList,
+} from "../lib/api";
+
 const profile = {
   name: "Abdul Hanan",
   title:
@@ -17,48 +28,39 @@ const profile = {
   university: "University Of Central Punjab",
   followers: "1041 connections",
   availability: "Open to work",
-  focus: "Full Stack AI Engineer || Software Engineer || Building scalable web & AI applications.",
+  focus:
+    "Full Stack AI Engineer || Software Engineer || Building scalable web & AI applications.",
   linkedin: "linkedin.com/in/abdulhanan394",
-  email: "abdulhanan04@icloud.com"
+  email: "abdulhanan04@icloud.com",
 };
-
-// fake activities
 
 const stats = [
   ["Profile views", "900", "Discover who viewed your portfolio."],
   ["Post impressions", "11500", "Engagement from your latest AI posts."],
-  ["Search appearances", "500", "How often you appear in recruiter searches."]
+  ["Search appearances", "500", "How often you appear in recruiter searches."],
 ];
-
-// dummy activities
 
 const activities = [
   {
     title: "BERT vs GPT",
-    text:
-      "A breakdown of transformer architecture and where each model family shines in modern AI workflows.",
+    text: "A breakdown of transformer architecture and where each model family shines in modern AI workflows.",
     tag: "AI Notes",
-    image: "/linkedin-page.png"
+    image: "/linkedin-page.png",
   },
   {
     title: "Activation Functions",
-    text:
-      "Why Tanh, ReLU, Sigmoid, and Softmax matter when building neural network intuition.",
+    text: "Why Tanh, ReLU, Sigmoid, and Softmax matter when building neural network intuition.",
     tag: "Deep Learning",
-    image: "/linkedin-page.png"
-  }
+    image: "/linkedin-page.png",
+  },
 ];
 
 // ---------------------------------------------------------------------------
-// Activity Intelligence feed
-// This is the client-facing surface for the "Abdul Core" pipeline:
-// Collector -> Normalizer -> AI Summarizer -> Tag Extractor -> Embedding -> API
-// Replace `intelActivities` with a fetch() to the Abdul Core Portfolio API,
-// e.g. GET /api/activities?source=all&limit=12
-// Expected shape per item mirrors the Activity entity from the backend design:
-// { id, source, type, title, summary, tags[], technologies[], category, date, url }
+// Fallback data — used only if the live API is unreachable, so the page
+// never shows an empty state to a visitor. Real data comes from
+// GET /api/v1/activities and GET /api/v1/projects via lib/api.ts.
 // ---------------------------------------------------------------------------
-const intelActivities = [
+const fallbackActivities = [
   {
     id: "a1",
     source: "github",
@@ -70,7 +72,7 @@ const intelActivities = [
     technologies: ["Python", "FastAPI", "ChromaDB"],
     category: "AI Infrastructure",
     date: "2026-07-18",
-    url: "https://github.com/AbdulHanan394"
+    url: "https://github.com/AbdulHanan394",
   },
   {
     id: "a2",
@@ -83,66 +85,45 @@ const intelActivities = [
     technologies: ["FastAPI", "APScheduler", "PostgreSQL"],
     category: "Platform Engineering",
     date: "2026-07-15",
-    url: "https://github.com/AbdulHanan394"
+    url: "https://github.com/AbdulHanan394",
+  },
+];
+
+const fallbackProjects = [
+  {
+    title: "Truck Dispatching Platform",
+    meta: "BURAQDispatches • 2025",
+    text: "Built the complete React.js frontend for a truck dispatching platform, integrated Cloudinary for document management, and consumed REST APIs to keep dispatch operations synchronized in real time.",
+    stack: ["React.js", "REST APIs", "Cloudinary", "Logistics", "Frontend"],
+    link: "https://buraqdispatcher.netlify.app/",
   },
   {
-    id: "a3",
-    source: "linkedin",
-    type: "Post",
-    title: "Shared a breakdown of BERT vs GPT architectures",
-    summary:
-      "Published a explainer comparing encoder-only and decoder-only transformer designs, aimed at engineers building intuition before diving into LLM internals.",
-    tags: ["AI Notes", "Deep Learning"],
-    technologies: ["Transformers", "LLMs"],
-    category: "Thought Leadership",
-    date: "2026-07-12",
-    url: "https://www.linkedin.com/in/abdulhanan394"
+    title: "FocusSpark – AI Productivity & Learning Assistant",
+    meta: "Final Year Project • In Progress",
+    text: "Developing an AI-powered productivity platform with real-time focus detection, document chat, flashcard and quiz generation, behavioral analytics, and personalized learning assistance.",
+    stack: [
+      "React",
+      "TypeScript",
+      "FastAPI",
+      "PostgreSQL",
+      "MediaPipe",
+      "OpenCV",
+      "DeepFace",
+      "LLMs",
+      "AI",
+    ],
+    link: "https://focusspark-frontend.vercel.app/",
   },
-  {
-    id: "a4",
-    source: "x",
-    type: "Post",
-    title: "Thread on building a private RAG assistant with Ollama",
-    summary:
-      "Walked through hosting local LLMs with Ollama alongside Sentence Transformers for retrieval, and why keeping the assistant's memory local matters for a personal AI core.",
-    tags: ["RAG", "Local LLMs"],
-    technologies: ["Ollama", "Sentence Transformers"],
-    category: "AI Notes",
-    date: "2026-07-09",
-    url: "https://x.com/AbdulHanan394"
-  },
-  {
-    id: "a5",
-    source: "github",
-    type: "Release",
-    title: "Shipped FocusSpark's real-time focus detection module",
-    summary:
-      "Integrated MediaPipe and DeepFace to compute head pose and eye-aspect-ratio in real time, feeding a behavioral analytics layer for the FocusSpark learning assistant.",
-    tags: ["Computer Vision", "Final Year Project"],
-    technologies: ["MediaPipe", "OpenCV", "DeepFace"],
-    category: "Applied AI",
-    date: "2026-07-04",
-    url: "https://focusspark-frontend.vercel.app/"
-  },
-  {
-    id: "a6",
-    source: "linkedin",
-    type: "Post",
-    title: "Notes on activation functions for neural network intuition",
-    summary:
-      "Broke down when Tanh, ReLU, Sigmoid, and Softmax actually matter in practice, with a focus on building intuition rather than memorizing formulas.",
-    tags: ["Deep Learning"],
-    technologies: ["Neural Networks"],
-    category: "Thought Leadership",
-    date: "2026-06-28",
-    url: "https://www.linkedin.com/in/abdulhanan394"
-  }
 ];
 
 const sourceMeta = {
   github: { label: "GitHub", icon: FaGithub, className: "source-github" },
-  linkedin: { label: "LinkedIn", icon: FaLinkedin, className: "source-linkedin" },
-  x: { label: "X", icon: FaXTwitter, className: "source-x" }
+  linkedin: {
+    label: "LinkedIn",
+    icon: FaLinkedin,
+    className: "source-linkedin",
+  },
+  x: { label: "X", icon: FaXTwitter, className: "source-x" },
 };
 
 function timeAgo(dateStr) {
@@ -156,258 +137,44 @@ function timeAgo(dateStr) {
   return `${months}mo ago`;
 }
 
-// ---------------------------------------------------------------------------
-// AI Playground
-// Ask-Abdul chat surface, styled to sit inside the same LinkedIn-like shell.
-// `askAgent` below is a lightweight local stand-in for the real call to the
-// Abdul Core AI Assistant endpoint (POST /api/assistant/query), which performs
-// RAG over the embedded activity + profile data. Swap the body of `askAgent`
-// for a fetch() once that endpoint is live:
-//
-// const res = await fetch("/api/assistant/query", {
-//   method: "POST",
-//   headers: { "Content-Type": "application/json" },
-//   body: JSON.stringify({ question })
-// });
-// const { answer } = await res.json();
-// ---------------------------------------------------------------------------
 const suggestedPrompts = [
   "What has Abdul built recently?",
   "What's Abdul's AI stack?",
   "Is Abdul open to work?",
-  "Tell me about FocusSpark"
+  "Tell me about FocusSpark",
 ];
 
-function askAgent(question) {
+// Local fallback answers, only used if the live /assistant/query call fails
+// (e.g. backend down). Keeps the chat useful even when offline.
+function askAgentOffline(question) {
   const q = question.toLowerCase();
-
   if (q.includes("recent") || q.includes("built") || q.includes("working on")) {
-    return "Lately Abdul has been reworking the embedding pipeline for his personal AI Core (batched ChromaDB upserts, a GitHub collector on APScheduler), and shipping real-time focus detection for FocusSpark using MediaPipe and DeepFace.";
+    return "Lately Abdul has been reworking the embedding pipeline for his personal AI Core and shipping real-time focus detection for FocusSpark. (Offline preview answer — live assistant is unreachable right now.)";
   }
   if (q.includes("stack") || q.includes("technolog") || q.includes("tools")) {
-    return "On the AI side: FastAPI, PostgreSQL, ChromaDB, RAG, Sentence Transformers, LangChain, and Ollama for local LLMs. On the product side: React, Next.js, and TypeScript. He leans on clean, modular architecture across both.";
+    return "On the AI side: FastAPI, PostgreSQL, ChromaDB, RAG, Sentence Transformers, LangChain, and Ollama. On the product side: React, Next.js, and TypeScript. (Offline preview answer.)";
   }
-  if (q.includes("open to work") || q.includes("hire") || q.includes("available")) {
-    return "Yes — Abdul is open to Full Stack / AI Engineer roles. You can reach him at abdulhanan04@icloud.com or via LinkedIn (linkedin.com/in/abdulhanan394).";
+  if (
+    q.includes("open to work") ||
+    q.includes("hire") ||
+    q.includes("available")
+  ) {
+    return `Yes — Abdul is open to Full Stack / AI Engineer roles. Reach him at ${profile.email} or via LinkedIn (${profile.linkedin}). (Offline preview answer.)`;
   }
   if (q.includes("focusspark")) {
-    return "FocusSpark is Abdul's final year project: an AI-powered productivity and learning assistant with real-time focus detection, document chat, flashcard/quiz generation, and behavioral analytics, built with React, FastAPI, and computer vision models.";
+    return "FocusSpark is Abdul's final year project: an AI-powered productivity and learning assistant with real-time focus detection, document chat, and quiz generation. (Offline preview answer.)";
   }
-  if (q.includes("project")) {
-    return "Current projects include a Truck Dispatching Platform, a Truck Moving Company Platform, FocusSpark (an AI learning assistant), and his own Personal AI Assistant powered by RAG and ChromaDB.";
-  }
-  return "I'm a lightweight preview of Abdul's AI assistant — once the Abdul Core backend is wired up, this will pull live, embedding-backed answers about his projects and activity. For now, try asking about his recent work, stack, or availability.";
+  return "The live AI assistant is unreachable right now, so you're seeing a static preview. Try asking about recent work, stack, or availability once the backend is back up.";
 }
-
-const projects = [
-  {
-    title: "Truck Dispatching Platform",
-    meta: "BURAQDispatches • 2025",
-    text:
-      "Built the complete React.js frontend for a truck dispatching platform, integrated Cloudinary for document management, and consumed REST APIs to keep dispatch operations synchronized in real time.",
-    stack: [
-      "React.js",
-      "REST APIs",
-      "Cloudinary",
-      "Logistics",
-      "Frontend"
-    ],
-    link: "https://buraqdispatcher.netlify.app/"
-  },
-  {
-    title: "FocusSpark – AI Productivity & Learning Assistant",
-    meta: "Final Year Project • In Progress",
-    text:
-      "Developing an AI-powered productivity platform with real-time focus detection, document chat, flashcard and quiz generation, behavioral analytics, and personalized learning assistance.",
-    stack: [
-      "React",
-      "TypeScript",
-      "FastAPI",
-      "PostgreSQL",
-      "MediaPipe",
-      "OpenCV",
-      "DeepFace",
-      "LLMs",
-      "AI"
-    ],
-    link: "https://focusspark-frontend.vercel.app/"
-  },
-  {
-    title: "Truck Moving Company Platform",
-    meta: "JBeasyMovingLLC • 2025",
-    text:
-      "Developed a high-performance React.js frontend with Google Maps integration and Redux-powered predictive location auto-fill, improving booking accuracy and operational efficiency.",
-    stack: [
-      "React.js",
-      "Redux",
-      "Google Maps API",
-      "Logistics",
-      "Frontend"
-    ],
-    link: "https://jbeasymovingllc.netlify.app/"
-  },
-  {
-    title: "Personal AI Assistant",
-    meta: "Self-Initiated • In Progress",
-    text:
-      "Building a private memory-enabled AI assistant using RAG, ChromaDB, Sentence Transformers, FastAPI, Ollama, and hosted LLMs with an extensible AI agent architecture.",
-    stack: [
-      "React",
-      "FastAPI",
-      "ChromaDB",
-      "RAG",
-      "LLMs",
-      "AI Agents",
-      "Ollama"
-    ],
-    link: "https://github.com/AbdulHanan394"
-  }
-];
-
-const experience = [
-  ["Full Stack Engineer", "JBeasyMovingLLC", "2025 - Present", "Truck Moving Company Platform - Logistics Industry"],
-  ["Full Stack Engineer", "BURAQDispatches", "2025 - Present", "Truck Dispatching Platform - Logistics Industry"]
-];
-
-const skillCategories = [
-  {
-    title: "Programming Languages",
-    skills: [
-      "Python",
-      "JavaScript (ES6+)",
-      "TypeScript",
-      "SQL",
-      "C++",
-      "C",
-      "HTML5",
-      "CSS3"
-    ]
-  },
-  {
-    title: "Frontend Development",
-    skills: [
-      "React.js",
-      "Next.js",
-      "Redux",
-      "Context API",
-      "Tailwind CSS"
-    ]
-  },
-  {
-    title: "Backend Development",
-    skills: [
-      "Node.js",
-      "Express.js",
-      "FastAPI",
-      "REST APIs",
-      "GraphQL",
-      "JWT Authentication"
-    ]
-  },
-  {
-    title: "Databases",
-    skills: [
-      "MongoDB",
-      "MySQL",
-      "PostgreSQL",
-      "ChromaDB"
-    ]
-  },
-  {
-    title: "AI & Machine Learning",
-    skills: [
-      "Machine Learning",
-      "Deep Learning",
-      "Neural Networks",
-      "Gradient Descent",
-      "CNN",
-      "RNN",
-      "LSTM",
-      "GRU",
-      "NumPy",
-      "Pandas"
-    ]
-  },
-  {
-    title: "LLMs & Generative AI",
-    skills: [
-      "Transformer Architecture",
-      "Self-Attention",
-      "Multi-Head Attention",
-      "BERT",
-      "GPT",
-      "LLMs",
-      "Prompt Engineering",
-      "LangChain",
-      "Hugging Face",
-      "AI Agents",
-      "Tool Calling"
-    ]
-  },
-  {
-    title: "RAG & Semantic Search",
-    skills: [
-      "Retrieval-Augmented Generation (RAG)",
-      "Sentence Transformers",
-      "Embeddings",
-      "Semantic Search",
-      "Vector Databases"
-    ]
-  },
-  {
-    title: "Computer Vision",
-    skills: [
-      "OpenCV",
-      "MediaPipe",
-      "DeepFace",
-      "Head Pose Estimation",
-      "Eye Aspect Ratio (EAR)"
-    ]
-  },
-  {
-    title: "Cloud & DevOps",
-    skills: [
-      "Docker",
-      "Kubernetes",
-      "Git",
-      "GitHub",
-      "GitHub Actions",
-      "Linux",
-      "Nginx",
-      "Cloudinary",
-      "Ollama"
-    ]
-  },
-  {
-    title: "Software Engineering",
-    skills: [
-      "Clean Architecture",
-      "Scalable Systems",
-      "Modular Design",
-      "Performance Optimization",
-      "Software Design Patterns",
-      "Data Structures & Algorithms"
-    ]
-  }
-];
-
-const viewers = [
-  "Customer Service Specialist at AT&T",
-  "Software Developer at NeuroFive solutions",
-  "Someone at University of Central Punjab",
-  "AI Engineer in Lahore"
-];
 
 function Icon({ children }) {
-  return <span className="icon" aria-hidden="true">{children}</span>;
+  return (
+    <span className="icon" aria-hidden="true">
+      {children}
+    </span>
+  );
 }
 
-// ---------------------------------------------------------------------------
-// Slider — horizontal, scroll-snapped carousel used for feeds that can grow
-// large (Activity Intelligence, Posts). Avoids ever-growing vertical scroll
-// when there are dozens/hundreds of items; drag/swipe works natively via
-// native overflow scroll, arrows are a convenience for pointer/keyboard users.
-// ---------------------------------------------------------------------------
 function Slider({ children, ariaLabel }) {
   const trackRef = useRef(null);
 
@@ -430,11 +197,14 @@ function Slider({ children, ariaLabel }) {
       >
         <ChevronLeft size={18} />
       </button>
-
-      <div className="slider-track" ref={trackRef} role="list" aria-label={ariaLabel}>
+      <div
+        className="slider-track"
+        ref={trackRef}
+        role="list"
+        aria-label={ariaLabel}
+      >
         {children}
       </div>
-
       <button
         type="button"
         className="slider-arrow slider-arrow-right"
@@ -487,23 +257,32 @@ function ProfileHero({ onAskAI }) {
         <div className="profile-main">
           <div className="name-row">
             <h1>{profile.name}</h1>
-           
           </div>
           <p className="headline">{profile.title}</p>
-          <p className="muted">{profile.location} - <a href="#contact">Contact info</a></p>
+          <p className="muted">
+            {profile.location} - <a href="#contact">Contact info</a>
+          </p>
           <p className="linkline">{profile.followers}</p>
           <div className="profile-actions">
-            <a className="outline-pill" href="#contact">Open to</a>
-            <a className="outline-pill" href="#projects">Projects</a>
-            <a className="outline-pill" href="#skills">Skills</a>
+            <a className="outline-pill" href="#contact">
+              Open to
+            </a>
+            <a className="outline-pill" href="#projects">
+              Projects
+            </a>
+            <a className="outline-pill" href="#skills">
+              Skills
+            </a>
             <button type="button" className="outline-pill" onClick={onAskAI}>
               Ask AI
             </button>
           </div>
         </div>
         <div className="profile-orgs">
-         
-          <p><span className="org-mark blue">U</span>{profile.university}</p>
+          <p>
+            <span className="org-mark blue">U</span>
+            {profile.university}
+          </p>
         </div>
       </div>
     </section>
@@ -516,44 +295,39 @@ function StickySnapshot() {
       <div className="cover">
         <img src="/profile-card.png" alt="Profile Cover" />
       </div>
-
       <div className="sticky-avatar">
-        <img
-          src="/profile-card_01.png"
-          alt="Abdul Hanan"
-        />
+        <img src="/profile-card_01.png" alt="Abdul Hanan" />
       </div>
-
       <div className="snapshot-body">
         <h2>{profile.name}</h2>
-
-        <p className="snapshot-focus">
-          {profile.focus}
-        </p>
-
+        <p className="snapshot-focus">{profile.focus}</p>
         <div className="snapshot-meta">
           <span>{profile.location}</span>
         </div>
-
       </div>
     </aside>
   );
 }
-function RightRail({ theme, setTheme }) {
-  
-const [copied, setCopied] = useState("");
-const copyToClipboard = async (text, id) => {
-  try {
-    await navigator.clipboard.writeText(text);
-    setCopied(id);
 
-    setTimeout(() => {
-      setCopied("");
-    }, 2000); // Reset after 2 seconds
-  } catch (err) {
-    console.error("Failed to copy:", err);
-  }
-};
+function RightRail({ theme, setTheme }) {
+  const [copied, setCopied] = useState("");
+  const copyToClipboard = async (text, id) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(id);
+      setTimeout(() => setCopied(""), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
+  const viewers = [
+    "Customer Service Specialist at AT&T",
+    "Software Developer at NeuroFive solutions",
+    "Someone at University of Central Punjab",
+    "AI Engineer in Lahore",
+  ];
+
   return (
     <aside className="right-rail">
       <div className="rail-card">
@@ -562,121 +336,134 @@ const copyToClipboard = async (text, id) => {
             <h3>Profile language</h3>
             <p>English</p>
           </div>
-       
         </div>
-     <div
-  className="rail-row"
-  style={{
-    display: "flex",
-    flexDirection: "column",
-    gap: "18px",
-  }}
->
-  <div>
-    <h3>LinkedIn Profile & URL</h3>
-    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-      <p style={{ margin: 0 }}>linkedin.com/in/abdulhanan394</p>
-     <Copy
-  size={18}
-  style={{
-    cursor: "pointer",
-    color: copied === "linkedin" ? "#22c55e" : "#6b7280",
-    transition: "color 0.3s ease",
-  }}
-  onClick={() =>
-    copyToClipboard(
-      "https://www.linkedin.com/in/abdulhanan394",
-      "linkedin"
-    )
-  }
-/>
-    </div>
-  </div>
-
-  <div>
-    <h3>GitHub Profile & URL</h3>
-    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-      <p style={{ margin: 0 }}>github.com/AbdulHanan394</p>
-     <Copy
-  size={18}
-  style={{
-    cursor: "pointer",
-    color: copied === "github" ? "#22c55e" : "#6b7280",
-    transition: "color 0.3s ease",
-  }}
-  onClick={() =>
-    copyToClipboard(
-      "https://github.com/AbdulHanan394",
-      "github"
-    )
-  }
-/>
-    </div>
-  </div>
-
-  <div>
-    <h3>X Profile & URL</h3>
-    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-      <p style={{ margin: 0 }}>x.com/AbdulHanan394</p>
- <Copy
-  size={18}
-  style={{
-    cursor: "pointer",
-    color: copied === "x" ? "#22c55e" : "#6b7280",
-    transition: "color 0.3s ease",
-  }}
-  onClick={() =>
-    copyToClipboard(
-      "https://x.com/AbdulHanan394",
-      "x"
-    )
-  }
-/>
-    </div>
-  </div>
-</div>
+        <div
+          className="rail-row"
+          style={{ display: "flex", flexDirection: "column", gap: "18px" }}
+        >
+          <div>
+            <h3>LinkedIn Profile & URL</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <p style={{ margin: 0 }}>linkedin.com/in/abdulhanan394</p>
+              <Copy
+                size={18}
+                style={{
+                  cursor: "pointer",
+                  color: copied === "linkedin" ? "#22c55e" : "#6b7280",
+                  transition: "color 0.3s ease",
+                }}
+                onClick={() =>
+                  copyToClipboard(
+                    "https://www.linkedin.com/in/abdulhanan394",
+                    "linkedin",
+                  )
+                }
+              />
+            </div>
+          </div>
+          <div>
+            <h3>GitHub Profile & URL</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <p style={{ margin: 0 }}>github.com/AbdulHanan394</p>
+              <Copy
+                size={18}
+                style={{
+                  cursor: "pointer",
+                  color: copied === "github" ? "#22c55e" : "#6b7280",
+                  transition: "color 0.3s ease",
+                }}
+                onClick={() =>
+                  copyToClipboard("https://github.com/AbdulHanan394", "github")
+                }
+              />
+            </div>
+          </div>
+          <div>
+            <h3>X Profile & URL</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <p style={{ margin: 0 }}>x.com/AbdulHanan394</p>
+              <Copy
+                size={18}
+                style={{
+                  cursor: "pointer",
+                  color: copied === "x" ? "#22c55e" : "#6b7280",
+                  transition: "color 0.3s ease",
+                }}
+                onClick={() =>
+                  copyToClipboard("https://x.com/AbdulHanan394", "x")
+                }
+              />
+            </div>
+          </div>
+        </div>
         <ThemeButton theme={theme} setTheme={setTheme} />
       </div>
 
       <div className="rail-card">
         <h3>You May Know</h3>
-        {viewers.map((item, index) => (
+        {viewers.map((item) => (
           <div className="person-row" key={item}>
             <div>
               <strong>{item}</strong>
-            
             </div>
           </div>
         ))}
       </div>
-
-     
     </aside>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Activity Intelligence section — renders the AI-enriched activity feed
-// produced by the Abdul Core pipeline (Collector -> Normalizer -> AI
-// Summarizer -> Tag Extractor -> Embedding Generator -> Storage -> API).
+// Activity Intelligence — now backed by GET /api/v1/activities (via the
+// local proxy). Falls back to static preview data if the fetch fails.
 // ---------------------------------------------------------------------------
 function ActivityIntelligence() {
   const [filter, setFilter] = useState("all");
+  const [items, setItems] = useState(fallbackActivities);
+  const [loading, setLoading] = useState(true);
+  const [live, setLive] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    listActivities({ source: filter })
+      .then((data) => {
+        if (cancelled) return;
+        const list = unwrapList(data);
+        if (list.length) {
+          setItems(list);
+          setLive(true);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load activities:", err);
+        if (!cancelled) setLive(false);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [filter]);
 
   const filtered =
-    filter === "all"
-      ? intelActivities
-      : intelActivities.filter((item) => item.source === filter);
+    filter === "all" ? items : items.filter((item) => item.source === filter);
 
   return (
     <Section
       id="activity-intelligence"
       title="Activity Intelligence"
-      action={<span className="tiny-action live-pill"><span className="live-dot" />Live feed</span>}
+      action={
+        <span className="tiny-action live-pill">
+          <span className="live-dot" />
+          {live ? "Live feed" : loading ? "Loading…" : "Preview data"}
+        </span>
+      }
     >
       <p className="about-text intel-lede">
-        Auto-collected from GitHub, LinkedIn, and X, then summarized and tagged by
-        Abdul&apos;s own AI pipeline — no manual copywriting.
+        Auto-collected from GitHub, LinkedIn, and X, then summarized and tagged
+        by Abdul&apos;s own AI pipeline — no manual copywriting.
       </p>
 
       <div className="tabs" aria-label="Filter activity by source">
@@ -684,7 +471,7 @@ function ActivityIntelligence() {
           { id: "all", label: "All" },
           { id: "github", label: "GitHub" },
           { id: "linkedin", label: "LinkedIn" },
-          { id: "x", label: "X" }
+          { id: "x", label: "X" },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -699,7 +486,7 @@ function ActivityIntelligence() {
 
       <Slider ariaLabel="Activity intelligence feed">
         {filtered.map((item) => {
-          const meta = sourceMeta[item.source];
+          const meta = sourceMeta[item.source] || sourceMeta.github;
           const SourceIcon = meta.icon;
           return (
             <article className="intel-card slide-item" key={item.id}>
@@ -721,11 +508,13 @@ function ActivityIntelligence() {
 
               <div className="chip-row intel-chips">
                 <span className="category-chip">{item.category}</span>
-                {item.tags.map((tag) => (
+                {(item.tags || []).map((tag) => (
                   <span key={tag}>{tag}</span>
                 ))}
-                {item.technologies.map((tech) => (
-                  <span key={tech} className="tech-chip">{tech}</span>
+                {(item.technologies || []).map((tech) => (
+                  <span key={tech} className="tech-chip">
+                    {tech}
+                  </span>
                 ))}
               </div>
 
@@ -746,66 +535,141 @@ function ActivityIntelligence() {
 }
 
 // ---------------------------------------------------------------------------
-// Shared chat state — used by both the "AI Playground" teaser section and the
-// floating widget, so a prompt started from either place lands in the same
-// conversation.
+// Live projects — GET /api/v1/projects, falls back to static list on error.
+// Backend field names may differ slightly, so we read a few possible keys.
+// ---------------------------------------------------------------------------
+function useLiveProjects() {
+  const [projects, setProjects] = useState(fallbackProjects);
+
+  useEffect(() => {
+    let cancelled = false;
+    listProjects()
+      .then((data) => {
+        if (cancelled) return;
+        const list = unwrapList(data);
+        if (list.length) setProjects(list);
+      })
+      .catch((err) => console.error("Failed to load projects:", err));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return projects;
+}
+
+// ---------------------------------------------------------------------------
+// Shared chat state — hits POST /api/v1/assistant/query via the proxy.
+// Falls back to a canned offline answer if the request fails.
 // ---------------------------------------------------------------------------
 function useAgentChat() {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
       content:
-        "Hey, I'm a preview of Abdul's AI assistant. Ask me about his projects, stack, or availability."
-    }
+        "Hey, I'm Abdul's AI assistant. Ask me about his projects, stack, or availability.",
+    },
   ]);
+
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
 
-  const send = (text) => {
+  const send = async (text) => {
     const question = (text ?? input).trim();
+
     if (!question || thinking) return;
 
     setMessages((prev) => [...prev, { role: "user", content: question }]);
+
     setInput("");
     setThinking(true);
 
-    // Stand-in for a call to the Abdul Core RAG endpoint. See comment above
-    // `askAgent` for the real fetch() to swap in.
-    setTimeout(() => {
-      const answer = askAgent(question);
-      setMessages((prev) => [...prev, { role: "assistant", content: answer }]);
+    try {
+      const history = messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      const response = await askAssistant(question, history);
+
+      console.log("AI RESPONSE:", response);
+
+      let content;
+
+      if (typeof response === "string") {
+        content = response;
+      } else if (response?.content) {
+        content =
+          typeof response.content === "string"
+            ? response.content
+            : JSON.stringify(response.content);
+      } else if (response?.answer) {
+        content = response.answer;
+      } else if (response?.response) {
+        content = response.response;
+      } else if (response?.message) {
+        content =
+          typeof response.message === "string"
+            ? response.message
+            : response.message.content || JSON.stringify(response.message);
+      } else {
+        content = JSON.stringify(response);
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content,
+        },
+      ]);
+    } catch (err) {
+      console.error("Assistant request failed:", err);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: askAgentOffline(question),
+        },
+      ]);
+    } finally {
       setThinking(false);
-    }, 650);
+    }
   };
 
-  return { messages, input, setInput, thinking, send };
+  return {
+    messages,
+    input,
+    setInput,
+    thinking,
+    send,
+  };
 }
 
-// ---------------------------------------------------------------------------
-// AI Playground — full inline chat surface, kept in the page flow. Shares
-// the same `chat` state as the floating widget below, so a conversation
-// started here or from the floating button stays in sync either way.
-// ---------------------------------------------------------------------------
 function AIPlayground({ chat }) {
   const scrollRef = useRef(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current)
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
   }, [chat.messages, chat.thinking]);
 
   return (
     <Section
       id="ai-playground"
       title="AI Playground"
-      action={<span className="tiny-action live-pill"><Bot size={14} />Ask Abdul</span>}
+      action={
+        <span className="tiny-action live-pill">
+          <Bot size={14} />
+          Ask Abdul
+        </span>
+      }
     >
       <p className="about-text intel-lede">
-        A preview of Abdul&apos;s personal AI assistant — answers are grounded in
-        his real projects and activity, powered by RAG once the Abdul Core
-        backend is live. It&apos;s also docked bottom-right so you can keep
-        chatting while you browse.
+        Abdul&apos;s personal AI assistant — answers are grounded in his real
+        projects and activity via RAG over the Abdul Core backend. It&apos;s
+        also docked bottom-right so you can keep chatting while you browse.
       </p>
 
       <div className="chat-shell">
@@ -817,7 +681,11 @@ function AIPlayground({ chat }) {
                   <Bot size={16} />
                 </span>
               )}
-              <p>{m.content}</p>
+             <div className="markdown-content">
+  <Markdown>
+    {m.content}
+  </Markdown>
+</div>
             </div>
           ))}
           {chat.thinking && (
@@ -875,19 +743,12 @@ function AIPlayground({ chat }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Floating chat widget — a persistent, dockable "menu bar" style entry point.
-// A round button stays fixed in the corner at all times; clicking it toggles
-// an expandable chat panel open/closed without leaving whatever section
-// you're scrolled to.
-// ---------------------------------------------------------------------------
 function FloatingChatWidget({ open, setOpen, chat }) {
   const scrollRef = useRef(null);
 
   useEffect(() => {
-    if (open && scrollRef.current) {
+    if (open && scrollRef.current)
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
   }, [chat.messages, chat.thinking, open]);
 
   useEffect(() => {
@@ -901,7 +762,11 @@ function FloatingChatWidget({ open, setOpen, chat }) {
   return (
     <div className="floating-chat">
       {open && (
-        <div className="floating-chat-panel" role="dialog" aria-label="Ask Abdul's AI assistant">
+        <div
+          className="floating-chat-panel"
+          role="dialog"
+          aria-label="Ask Abdul's AI assistant"
+        >
           <div className="floating-chat-header">
             <span className="floating-chat-title">
               <Bot size={16} />
@@ -925,7 +790,11 @@ function FloatingChatWidget({ open, setOpen, chat }) {
                     <Bot size={16} />
                   </span>
                 )}
-                <p>{m.content}</p>
+               <div className="markdown-content">
+  <Markdown>
+    {m.content}
+  </Markdown>
+</div>
               </div>
             ))}
             {chat.thinking && (
@@ -995,10 +864,137 @@ function FloatingChatWidget({ open, setOpen, chat }) {
   );
 }
 
+const experience = [
+  [
+    "Full Stack Engineer",
+    "JBeasyMovingLLC",
+    "2025 - Present",
+    "Truck Moving Company Platform - Logistics Industry",
+  ],
+  [
+    "Full Stack Engineer",
+    "BURAQDispatches",
+    "2025 - Present",
+    "Truck Dispatching Platform - Logistics Industry",
+  ],
+];
+
+const skillCategories = [
+  {
+    title: "Programming Languages",
+    skills: [
+      "Python",
+      "JavaScript (ES6+)",
+      "TypeScript",
+      "SQL",
+      "C++",
+      "C",
+      "HTML5",
+      "CSS3",
+    ],
+  },
+  {
+    title: "Frontend Development",
+    skills: ["React.js", "Next.js", "Redux", "Context API", "Tailwind CSS"],
+  },
+  {
+    title: "Backend Development",
+    skills: [
+      "Node.js",
+      "Express.js",
+      "FastAPI",
+      "REST APIs",
+      "GraphQL",
+      "JWT Authentication",
+    ],
+  },
+  {
+    title: "Databases",
+    skills: ["MongoDB", "MySQL", "PostgreSQL", "ChromaDB"],
+  },
+  {
+    title: "AI & Machine Learning",
+    skills: [
+      "Machine Learning",
+      "Deep Learning",
+      "Neural Networks",
+      "Gradient Descent",
+      "CNN",
+      "RNN",
+      "LSTM",
+      "GRU",
+      "NumPy",
+      "Pandas",
+    ],
+  },
+  {
+    title: "LLMs & Generative AI",
+    skills: [
+      "Transformer Architecture",
+      "Self-Attention",
+      "Multi-Head Attention",
+      "BERT",
+      "GPT",
+      "LLMs",
+      "Prompt Engineering",
+      "LangChain",
+      "Hugging Face",
+      "AI Agents",
+      "Tool Calling",
+    ],
+  },
+  {
+    title: "RAG & Semantic Search",
+    skills: [
+      "Retrieval-Augmented Generation (RAG)",
+      "Sentence Transformers",
+      "Embeddings",
+      "Semantic Search",
+      "Vector Databases",
+    ],
+  },
+  {
+    title: "Computer Vision",
+    skills: [
+      "OpenCV",
+      "MediaPipe",
+      "DeepFace",
+      "Head Pose Estimation",
+      "Eye Aspect Ratio (EAR)",
+    ],
+  },
+  {
+    title: "Cloud & DevOps",
+    skills: [
+      "Docker",
+      "Kubernetes",
+      "Git",
+      "GitHub",
+      "GitHub Actions",
+      "Linux",
+      "Nginx",
+      "Cloudinary",
+      "Ollama",
+    ],
+  },
+  {
+    title: "Software Engineering",
+    skills: [
+      "Clean Architecture",
+      "Scalable Systems",
+      "Modular Design",
+      "Performance Optimization",
+      "Software Design Patterns",
+      "Data Structures & Algorithms",
+    ],
+  },
+];
+
 export default function PortfolioPage() {
   const [theme, setTheme] = useState("dark");
   const [chatOpen, setChatOpen] = useState(false);
   const chat = useAgentChat();
+  const projects = useLiveProjects();
 
   useEffect(() => {
     const saved = window.localStorage.getItem("portfolio-theme");
@@ -1006,14 +1002,22 @@ export default function PortfolioPage() {
       setTheme(saved);
       return;
     }
-    if (window.matchMedia("(prefers-color-scheme: light)").matches) {
+    if (window.matchMedia("(prefers-color-scheme: light)").matches)
       setTheme("light");
-    }
   }, []);
 
   useEffect(() => {
     window.localStorage.setItem("portfolio-theme", theme);
   }, [theme]);
+
+  // Optional: ping /health once on load, just to log backend reachability
+  useEffect(() => {
+    getHealth().catch(() =>
+      console.warn(
+        "Backend health check failed — using preview data where needed.",
+      ),
+    );
+  }, []);
 
   const year = useMemo(() => new Date().getFullYear(), []);
 
@@ -1039,8 +1043,6 @@ export default function PortfolioPage() {
         <div className="content">
           <ProfileHero onAskAI={() => setChatOpen(true)} />
 
-   
-
           <Section title="Analytics">
             <div className="stats-grid">
               {stats.map(([label, value, text]) => (
@@ -1053,30 +1055,58 @@ export default function PortfolioPage() {
             </div>
           </Section>
 
-          <Section title="About" action={<a className="tiny-action" href="#contact">Contact</a>}>
+          <Section
+            title="About"
+            action={
+              <a className="tiny-action" href="#contact">
+                Contact
+              </a>
+            }
+          >
             <p className="about-text" id="about">
-            I'm a Full-Stack AI Engineer with a strong foundation in Software Engineering, passionate about building intelligent, scalable, and production-ready applications that combine modern software development with Artificial Intelligence.
- <br></br><br></br>
-My expertise spans Python, React.js, Node.js, FastAPI, Express.js, PostgreSQL, MongoDB, Docker, REST APIs, CI/CD, and cloud-native development, alongside AI technologies including Large Language Models (LLMs), Retrieval-Augmented Generation (RAG), AI Agents, Vector Databases, Semantic Search, Prompt Engineering, and Transformer-based architectures. <br></br><br></br>
- 
-I enjoy designing end-to-end AI systems by applying software engineering principles such as clean architecture, modular design, scalability, maintainability, and performance optimization. My interests include Generative AI, intelligent automation, autonomous agents, AI-powered developer tools, and production AI applications.
- <br></br><br></br>
-I'm always exploring new technologies, solving challenging engineering problems, and collaborating on projects that push the boundaries of AI and software engineering.
+              I&apos;m a Full-Stack AI Engineer with a strong foundation in
+              Software Engineering, passionate about building intelligent,
+              scalable, and production-ready applications that combine modern
+              software development with Artificial Intelligence.
+              <br />
+              <br />
+              My expertise spans Python, React.js, Node.js, FastAPI, Express.js,
+              PostgreSQL, MongoDB, Docker, REST APIs, CI/CD, and cloud-native
+              development, alongside AI technologies including Large Language
+              Models (LLMs), Retrieval-Augmented Generation (RAG), AI Agents,
+              Vector Databases, Semantic Search, Prompt Engineering, and
+              Transformer-based architectures.
+              <br />
+              <br />
+              I enjoy designing end-to-end AI systems by applying software
+              engineering principles such as clean architecture, modular design,
+              scalability, maintainability, and performance optimization. My
+              interests include Generative AI, intelligent automation,
+              autonomous agents, AI-powered developer tools, and production AI
+              applications.
+              <br />
+              <br />
+              I&apos;m always exploring new technologies, solving challenging
+              engineering problems, and collaborating on projects that push the
+              boundaries of AI and software engineering.
             </p>
           </Section>
 
           <AIPlayground chat={chat} />
-
           <ActivityIntelligence />
 
           <Section title="Posts">
             <div className="tabs" aria-label="Activity filters">
-              <button type="button" className="active">Posts</button>
-        
+              <button type="button" className="active">
+                Posts
+              </button>
             </div>
             <Slider ariaLabel="Recent posts">
-              {activities.map((activity, index) => (
-                <article className="activity-card slide-item" key={activity.title}>
+              {activities.map((activity) => (
+                <article
+                  className="activity-card slide-item"
+                  key={activity.title}
+                >
                   <div className="activity-head">
                     <span className="mini-avatar avatar-photo" />
                     <div>
@@ -1085,58 +1115,65 @@ I'm always exploring new technologies, solving challenging engineering problems,
                     </div>
                   </div>
                   <h3>{activity.title}</h3>
-                  <p >{activity.text}</p>
-             <a
-  href="https://www.linkedin.com/in/abdulhanan394"
-  target="_blank"
-  rel="noopener noreferrer"
-  className="linkedin-btn"
->
-  View on LinkedIn →
-</a>
+                  <p>{activity.text}</p>
+                  <a
+                    href="https://www.linkedin.com/in/abdulhanan394"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="linkedin-btn"
+                  >
+                    View on LinkedIn →
+                  </a>
                 </article>
               ))}
             </Slider>
           </Section>
 
-       <Section
-  title="Projects"
-  action={<a className="tiny-action" href="#contact">Hire me</a>}
-  id="projects"
->
-  <div className="project-list">
-    {projects.map((project) => (
-      <article className="project-card" key={project.title}>
-        <div>
-          <h3>{project.title}</h3>
-          <p className="muted">{project.meta}</p>
-          <p>{project.text}</p>
-        </div>
-
-        <div className="chip-row">
-          {project.stack.map((item) => (
-            <span key={item}>{item}</span>
-          ))}
-        </div>
-
-        {project.link && (
-          <a
-            href={project.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="linkedin-btn"
-            style={{
-              marginTop: "16px",
-              alignSelf: "flex-start",
-            }}
+          <Section
+            title="Projects"
+            action={
+              <a className="tiny-action" href="#contact">
+                Hire me
+              </a>
+            }
+            id="projects"
           >
-            View Project →
-          </a>
-        )}
-      </article>
-    ))}
-  </div>
-</Section>
+            <div className="project-list">
+              {projects.map((project) => {
+                const stack = project.stack || project.technologies || [];
+                const desc = project.text || project.description || "";
+                const link = project.link || project.url;
+                return (
+                  <article
+                    className="project-card"
+                    key={project.id || project.title}
+                  >
+                    <div>
+                      <h3>{project.title}</h3>
+                      {project.meta && <p className="muted">{project.meta}</p>}
+                      <p>{desc}</p>
+                    </div>
+                    <div className="chip-row">
+                      {stack.map((item) => (
+                        <span key={item}>{item}</span>
+                      ))}
+                    </div>
+                    {link && (
+                      <a
+                        href={link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="linkedin-btn"
+                        style={{ marginTop: "16px", alignSelf: "flex-start" }}
+                      >
+                        View Project →
+                      </a>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          </Section>
 
           <Section title="Experience" id="experience">
             <div className="timeline">
@@ -1162,78 +1199,71 @@ I'm always exploring new technologies, solving challenging engineering problems,
                 <p>Bachelor of Science, Computer Software Engineering</p>
                 <small>2022 - Present</small>
                 <p>
-                  Relevant coursework: Data Structures & Algorithms, Database Systems,
-                  Web Engineering, Applied Machine Learning, Software Design Patterns,
-                  Operating Systems, Computer Networks, Information Security.
+                  Relevant coursework: Data Structures & Algorithms, Database
+                  Systems, Web Engineering, Applied Machine Learning, Software
+                  Design Patterns, Operating Systems, Computer Networks,
+                  Information Security.
                 </p>
               </div>
             </article>
           </Section>
 
-   <Section title="Technical Skills" id="skills">
-  <div className="skills-section">
-    {skillCategories.map((category) => (
-      <div className="skill-category" key={category.title}>
-        <h3>{category.title}</h3>
+          <Section title="Technical Skills" id="skills">
+            <div className="skills-section">
+              {skillCategories.map((category) => (
+                <div className="skill-category" key={category.title}>
+                  <h3>{category.title}</h3>
+                  <div className="skills">
+                    {category.skills.map((skill) => (
+                      <span key={skill}>{skill}</span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Section>
 
-        <div className="skills">
-          {category.skills.map((skill) => (
-            <span key={skill}>{skill}</span>
-          ))}
-        </div>
-      </div>
-    ))}
-  </div>
-</Section>
-
-    <footer className="footer" id="contact">
-  <div className="footer-content">
-    <div className="footer-left">
-      <h3>{profile.name}</h3>
-      <p>Software Engineer • Full-Stack AI Engineer</p>
-
-      <a
-        href={`mailto:${profile.email}`}
-        className="footer-email"
-      >
-        <FaEnvelope size={18} />
-        <span>{profile.email}</span>
-      </a>
-    </div>
-
-    <div className="footer-right">
-      <a
-        href="https://www.linkedin.com/in/abdulhanan394"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="LinkedIn"
-      >
-        <FaLinkedin size={22} />
-      </a>
-
-      <a
-        href="https://github.com/AbdulHanan394"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="GitHub"
-      >
-        <FaGithub size={22} />
-      </a>
-      <a
-        href="https://x.com/AbdulHanan394"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="X"
-      >
-        <FaXTwitter size={22} />
-      </a>
-    </div>
-  </div>
-
-  <div className="footer-bottom">
-    <span>© {year} Abdul Hanan. All Rights Reserved.</span>
-  </div>
-</footer>
+          <footer className="footer" id="contact">
+            <div className="footer-content">
+              <div className="footer-left">
+                <h3>{profile.name}</h3>
+                <p>Software Engineer • Full-Stack AI Engineer</p>
+                <a href={`mailto:${profile.email}`} className="footer-email">
+                  <FaEnvelope size={18} />
+                  <span>{profile.email}</span>
+                </a>
+              </div>
+              <div className="footer-right">
+                <a
+                  href="https://www.linkedin.com/in/abdulhanan394"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="LinkedIn"
+                >
+                  <FaLinkedin size={22} />
+                </a>
+                <a
+                  href="https://github.com/AbdulHanan394"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="GitHub"
+                >
+                  <FaGithub size={22} />
+                </a>
+                <a
+                  href="https://x.com/AbdulHanan394"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="X"
+                >
+                  <FaXTwitter size={22} />
+                </a>
+              </div>
+            </div>
+            <div className="footer-bottom">
+              <span>© {year} Abdul Hanan. All Rights Reserved.</span>
+            </div>
+          </footer>
         </div>
 
         <RightRail theme={theme} setTheme={setTheme} />
