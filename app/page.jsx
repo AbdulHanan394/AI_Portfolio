@@ -3,12 +3,16 @@ import Markdown from "react-markdown";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Copy,
+  Check,
+  RefreshCw,
+  AlertCircle,
   Send,
   Sparkles,
   Bot,
   ChevronLeft,
   ChevronRight,
   X,
+  Pencil,
 } from "lucide-react";
 import { FaGithub, FaLinkedin, FaXTwitter, FaEnvelope } from "react-icons/fa6";
 import {
@@ -165,6 +169,10 @@ function askAgentOffline(question) {
     return "FocusSpark is Abdul's final year project: an AI-powered productivity and learning assistant with real-time focus detection, document chat, and quiz generation. (Offline preview answer.)";
   }
   return "The live AI assistant is unreachable right now, so you're seeing a static preview. Try asking about recent work, stack, or availability once the backend is back up.";
+}
+
+function genId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
 function Icon({ children }) {
@@ -560,81 +568,187 @@ function useLiveProjects() {
 
 // ---------------------------------------------------------------------------
 // Shared chat state — hits POST /api/v1/assistant/query via the proxy.
-// Falls back to a canned offline answer if the request fails.
+//
+// Every message now carries a `status`: "sending" | "sent" | "error".
+// Assistant replies that come from the offline fallback carry
+// status "offline" plus a `retryText`/`userMsgId` so the bubble can offer a
+// "Try live answer" button. Failed user messages carry status "error" plus
+// a "Resend" action. Every bubble also gets a "Copy" action.
 // ---------------------------------------------------------------------------
 function useAgentChat() {
   const [messages, setMessages] = useState([
     {
+      id: genId(),
       role: "assistant",
       content:
         "Hey, I'm Abdul's AI assistant. Ask me about his projects, stack, or availability.",
+      status: "sent",
     },
   ]);
 
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
+  const [copiedId, setCopiedId] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [editingOriginal, setEditingOriginal] = useState("");
 
-  const send = async (text) => {
-    const question = (text ?? input).trim();
+  const updateMessage = (id, patch) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, ...patch } : m)),
+    );
+  };
 
-    if (!question || thinking) return;
+  const removeMessage = (id) => {
+    setMessages((prev) => prev.filter((m) => m.id !== id));
+  };
 
-    setMessages((prev) => [...prev, { role: "user", content: question }]);
+  const extractContent = (response) => {
+    if (typeof response === "string") return response;
+    if (response?.content) {
+      return typeof response.content === "string"
+        ? response.content
+        : JSON.stringify(response.content);
+    }
+    if (response?.answer) return response.answer;
+    if (response?.response) return response.response;
+    if (response?.message) {
+      return typeof response.message === "string"
+        ? response.message
+        : response.message.content || JSON.stringify(response.message);
+    }
+    return JSON.stringify(response);
+  };
 
-    setInput("");
+  // Performs the actual API call for a given question, attached to the
+  // user bubble identified by userMsgId so success/failure can update it.
+  const performSend = async (question, userMsgId) => {
     setThinking(true);
-
     try {
-      const history = messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
+      const history = messages
+        .filter((m) => m.role === "user" || m.status === "sent")
+        .map((m) => ({ role: m.role, content: m.content }));
 
       const response = await askAssistant(question, history);
-
       console.log("AI RESPONSE:", response);
 
-      let content;
+      const content = extractContent(response);
 
-      if (typeof response === "string") {
-        content = response;
-      } else if (response?.content) {
-        content =
-          typeof response.content === "string"
-            ? response.content
-            : JSON.stringify(response.content);
-      } else if (response?.answer) {
-        content = response.answer;
-      } else if (response?.response) {
-        content = response.response;
-      } else if (response?.message) {
-        content =
-          typeof response.message === "string"
-            ? response.message
-            : response.message.content || JSON.stringify(response.message);
-      } else {
-        content = JSON.stringify(response);
-      }
-
+      updateMessage(userMsgId, { status: "sent" });
       setMessages((prev) => [
         ...prev,
-        {
-          role: "assistant",
-          content,
-        },
+        { id: genId(), role: "assistant", content, status: "sent", userMsgId },
       ]);
     } catch (err) {
       console.error("Assistant request failed:", err);
-
+      updateMessage(userMsgId, { status: "error" });
       setMessages((prev) => [
         ...prev,
         {
+          id: genId(),
           role: "assistant",
           content: askAgentOffline(question),
+          status: "offline",
+          retryText: question,
+          userMsgId,
         },
       ]);
     } finally {
       setThinking(false);
+    }
+  };
+
+  // Loads a previously-sent message into the composer for editing, instead
+  // of editing inline inside the bubble.
+  const beginEdit = (message) => {
+    if (thinking) return;
+    setEditingId(message.id);
+    setEditingOriginal(message.content);
+    setInput(message.content);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditingOriginal("");
+    setInput("");
+  };
+
+  // Sends the composer text. If `text` is passed explicitly (e.g. a
+  // suggested-prompt click) it's always sent as a fresh message, and any
+  // in-progress edit is discarded. Otherwise, if a message is currently
+  // being edited, this saves the edit in place: it drops the old reply
+  // (successful or offline) attached to that message and resends the new
+  // text under the same message id.
+  const send = async (text) => {
+    if (text === undefined && editingId) {
+      const value = input.trim();
+      if (!value || value === editingOriginal.trim() || thinking) return;
+
+      const targetId = editingId;
+      setEditingId(null);
+      setEditingOriginal("");
+      setInput("");
+
+      setMessages((prev) =>
+        prev.filter(
+          (m) => !(m.role === "assistant" && m.userMsgId === targetId),
+        ),
+      );
+      updateMessage(targetId, { content: value, status: "sending" });
+
+      await performSend(value, targetId);
+      return;
+    }
+
+    if (editingId) {
+      setEditingId(null);
+      setEditingOriginal("");
+    }
+
+    const question = (text ?? input).trim();
+    if (!question || thinking) return;
+
+    const userMsgId = genId();
+    setMessages((prev) => [
+      ...prev,
+      { id: userMsgId, role: "user", content: question, status: "sending" },
+    ]);
+    setInput("");
+
+    await performSend(question, userMsgId);
+  };
+
+  // Resend a failed user message, or retry a stale/offline assistant
+  // bubble to get a live answer. Clears the old offline bubble first.
+  const retry = async (message) => {
+    if (thinking) return;
+
+    let question;
+    let userMsgId;
+
+    if (message.role === "user") {
+      question = message.content;
+      userMsgId = message.id;
+    } else {
+      question = message.retryText;
+      userMsgId = message.userMsgId;
+      if (!question || !userMsgId) return;
+      removeMessage(message.id);
+    }
+
+    updateMessage(userMsgId, { status: "sending" });
+    await performSend(question, userMsgId);
+  };
+
+  const copy = async (id, text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(
+        () => setCopiedId((current) => (current === id ? "" : current)),
+        1500,
+      );
+    } catch (err) {
+      console.error("Copy failed:", err);
     }
   };
 
@@ -644,7 +758,139 @@ function useAgentChat() {
     setInput,
     thinking,
     send,
+    retry,
+    beginEdit,
+    cancelEditing,
+    editingId,
+    editingOriginal,
+    copy,
+    copiedId,
   };
+}
+
+// ---------------------------------------------------------------------------
+// A single chat bubble: renders markdown content plus a hover action bar
+// (copy) and, when relevant, a status row (sending / failed+resend /
+// offline+try-live).
+// ---------------------------------------------------------------------------
+function ChatBubble({
+  message,
+  thinking,
+  onCopy,
+  onRetry,
+  onStartEdit,
+  copied,
+  editingId,
+}) {
+  const isFailed = message.status === "error";
+  const isOffline = message.status === "offline";
+  const isSending = message.status === "sending";
+  const isUser = message.role === "user";
+  const isBeingEdited = editingId === message.id;
+
+  return (
+    <div
+      className={`chat-message ${message.role} ${isFailed ? "is-error" : ""} ${
+        isBeingEdited ? "is-editing-target" : ""
+      }`}
+    >
+      {message.role === "assistant" && (
+        <span className="chat-avatar">
+          <Bot size={16} />
+        </span>
+      )}
+      <div className="chat-bubble-wrap">
+        <div className="markdown-content">
+          <Markdown>{message.content}</Markdown>
+        </div>
+
+        {isBeingEdited && (
+          <div className="chat-meta-row">
+            <span className="chat-badge chat-badge-editing">
+              <Pencil size={12} />
+              Editing…
+            </span>
+          </div>
+        )}
+
+        {isSending && (
+          <div className="chat-meta-row">
+            <span className="chat-badge chat-badge-sending">Sending…</span>
+          </div>
+        )}
+
+        {isFailed && (
+          <div className="chat-meta-row">
+            <span className="chat-badge chat-badge-error">
+              <AlertCircle size={12} />
+              Failed to send
+            </span>
+            <button
+              type="button"
+              className="chat-mini-btn"
+              onClick={() => onRetry(message)}
+              disabled={thinking}
+            >
+              <RefreshCw size={12} />
+              Resend
+            </button>
+          </div>
+        )}
+
+        {isOffline && (
+          <div className="chat-meta-row">
+            <span className="chat-badge chat-badge-offline">
+              Offline preview
+            </span>
+            <button
+              type="button"
+              className="chat-mini-btn"
+              onClick={() => onRetry(message)}
+              disabled={thinking}
+            >
+              <RefreshCw size={12} />
+              Try live answer
+            </button>
+            <button
+              type="button"
+              className="chat-icon-btn chat-icon-btn-inline"
+              onClick={() => onCopy(message.id, message.content)}
+              aria-label="Copy message"
+              title={copied ? "Copied" : "Copy"}
+            >
+              {copied ? <Check size={13} /> : <Copy size={13} />}
+            </button>
+          </div>
+        )}
+
+        {!isOffline && !isBeingEdited && (
+          <div className="chat-actions">
+            {isUser && !isSending && (
+              <button
+                type="button"
+                className="chat-icon-btn"
+                onClick={() => onStartEdit(message)}
+                aria-label="Edit message"
+                title="Edit"
+                disabled={thinking}
+              >
+                <Pencil size={13} />
+              </button>
+            )}
+            <button
+              type="button"
+              className="chat-icon-btn"
+              onClick={() => onCopy(message.id, message.content)}
+              aria-label="Copy message"
+              title={copied ? "Copied" : "Copy"}
+            >
+              {copied ? <Check size={13} /> : <Copy size={13} />}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function AIPlayground({ chat }) {
@@ -674,19 +920,17 @@ function AIPlayground({ chat }) {
 
       <div className="chat-shell">
         <div className="chat-window" ref={scrollRef}>
-          {chat.messages.map((m, i) => (
-            <div key={i} className={`chat-message ${m.role}`}>
-              {m.role === "assistant" && (
-                <span className="chat-avatar">
-                  <Bot size={16} />
-                </span>
-              )}
-             <div className="markdown-content">
-  <Markdown>
-    {m.content}
-  </Markdown>
-</div>
-            </div>
+          {chat.messages.map((m) => (
+            <ChatBubble
+              key={m.id}
+              message={m}
+              thinking={chat.thinking}
+              onCopy={chat.copy}
+              onRetry={chat.retry}
+              onStartEdit={chat.beginEdit}
+              editingId={chat.editingId}
+              copied={chat.copiedId === m.id}
+            />
           ))}
           {chat.thinking && (
             <div className="chat-message assistant">
@@ -715,6 +959,24 @@ function AIPlayground({ chat }) {
           ))}
         </div>
 
+        {chat.editingId && (
+          <div className="chat-editing-banner">
+            <span>
+              <Pencil size={12} />
+              Editing message
+            </span>
+            <button
+              type="button"
+              onClick={chat.cancelEditing}
+              aria-label="Cancel edit"
+              className="chat-editing-cancel"
+            >
+              <X size={14} />
+              Cancel
+            </button>
+          </div>
+        )}
+
         <form
           className="chat-input-row"
           onSubmit={(e) => {
@@ -726,13 +988,22 @@ function AIPlayground({ chat }) {
             type="text"
             value={chat.input}
             onChange={(e) => chat.setInput(e.target.value)}
-            placeholder="Ask about Abdul's work..."
+            placeholder={
+              chat.editingId
+                ? "Edit your message..."
+                : "Ask about Abdul's work..."
+            }
             aria-label="Ask Abdul's AI assistant"
           />
           <button
             type="submit"
             className="chat-send"
-            disabled={chat.thinking || !chat.input.trim()}
+            disabled={
+              chat.thinking ||
+              !chat.input.trim() ||
+              (chat.editingId &&
+                chat.input.trim() === chat.editingOriginal.trim())
+            }
             aria-label="Send"
           >
             <Send size={16} />
@@ -783,19 +1054,17 @@ function FloatingChatWidget({ open, setOpen, chat }) {
           </div>
 
           <div className="chat-window floating-chat-window" ref={scrollRef}>
-            {chat.messages.map((m, i) => (
-              <div key={i} className={`chat-message ${m.role}`}>
-                {m.role === "assistant" && (
-                  <span className="chat-avatar">
-                    <Bot size={16} />
-                  </span>
-                )}
-               <div className="markdown-content">
-  <Markdown>
-    {m.content}
-  </Markdown>
-</div>
-              </div>
+            {chat.messages.map((m) => (
+              <ChatBubble
+                key={m.id}
+                message={m}
+                thinking={chat.thinking}
+                onCopy={chat.copy}
+                onRetry={chat.retry}
+                onStartEdit={chat.beginEdit}
+                editingId={chat.editingId}
+                copied={chat.copiedId === m.id}
+              />
             ))}
             {chat.thinking && (
               <div className="chat-message assistant">
@@ -824,6 +1093,24 @@ function FloatingChatWidget({ open, setOpen, chat }) {
             ))}
           </div>
 
+          {chat.editingId && (
+            <div className="chat-editing-banner floating-chat-editing-banner">
+              <span>
+                <Pencil size={12} />
+                Editing message
+              </span>
+              <button
+                type="button"
+                onClick={chat.cancelEditing}
+                aria-label="Cancel edit"
+                className="chat-editing-cancel"
+              >
+                <X size={14} />
+                Cancel
+              </button>
+            </div>
+          )}
+
           <form
             className="chat-input-row floating-chat-input"
             onSubmit={(e) => {
@@ -835,13 +1122,22 @@ function FloatingChatWidget({ open, setOpen, chat }) {
               type="text"
               value={chat.input}
               onChange={(e) => chat.setInput(e.target.value)}
-              placeholder="Ask about Abdul's work..."
+              placeholder={
+                chat.editingId
+                  ? "Edit your message..."
+                  : "Ask about Abdul's work..."
+              }
               aria-label="Message Abdul's AI assistant"
             />
             <button
               type="submit"
               className="chat-send"
-              disabled={chat.thinking || !chat.input.trim()}
+              disabled={
+                chat.thinking ||
+                !chat.input.trim() ||
+                (chat.editingId &&
+                  chat.input.trim() === chat.editingOriginal.trim())
+              }
               aria-label="Send"
             >
               <Send size={16} />
@@ -1270,6 +1566,158 @@ export default function PortfolioPage() {
       </div>
 
       <FloatingChatWidget open={chatOpen} setOpen={setChatOpen} chat={chat} />
+
+      <style jsx global>{`
+        .chat-bubble-wrap {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+        }
+        .markdown-content > *:first-child {
+          margin-top: 0;
+        }
+        .markdown-content > *:last-child {
+          margin-bottom: 0;
+        }
+        .chat-message:hover .chat-actions {
+          opacity: 1;
+          pointer-events: auto;
+        }
+        .chat-actions {
+          display: flex;
+          justify-content: flex-end;
+          align-items: center;
+          gap: 6px;
+          margin-top: 1px;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.15s ease;
+        }
+        .chat-icon-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 22px;
+          height: 22px;
+          border-radius: 6px;
+          border: 1px solid rgba(148, 163, 184, 0.35);
+          background: rgba(148, 163, 184, 0.08);
+          color: inherit;
+          cursor: pointer;
+          transition:
+            background 0.15s ease,
+            color 0.15s ease;
+        }
+        .chat-icon-btn:hover {
+          background: rgba(148, 163, 184, 0.2);
+        }
+        .chat-meta-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-top: 2px;
+        }
+        .chat-icon-btn-inline {
+          width: 20px;
+          height: 20px;
+          margin-left: 2px;
+        }
+        .chat-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 0.02em;
+          padding: 2px 8px;
+          border-radius: 999px;
+        }
+        .chat-badge-sending {
+          color: #94a3b8;
+          background: rgba(148, 163, 184, 0.15);
+        }
+        .chat-badge-error {
+          color: #ef4444;
+          background: rgba(239, 68, 68, 0.12);
+        }
+        .chat-badge-offline {
+          color: #f59e0b;
+          background: rgba(245, 158, 11, 0.12);
+        }
+        .chat-mini-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 11px;
+          font-weight: 600;
+          padding: 3px 9px;
+          border-radius: 999px;
+          border: 1px solid rgba(148, 163, 184, 0.4);
+          background: transparent;
+          color: inherit;
+          cursor: pointer;
+          transition:
+            background 0.15s ease,
+            border-color 0.15s ease;
+        }
+        .chat-mini-btn:hover:not(:disabled) {
+          background: rgba(148, 163, 184, 0.15);
+          border-color: rgba(148, 163, 184, 0.6);
+        }
+        .chat-mini-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        .chat-edit-box {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .chat-message.is-editing-target {
+          opacity: 0.75;
+        }
+        .chat-badge-editing {
+          color: #6366f1;
+          background: rgba(99, 102, 241, 0.12);
+        }
+        .chat-editing-banner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          padding: 6px 10px;
+          margin-bottom: 4px;
+          border-radius: 10px;
+          border: 1px solid rgba(99, 102, 241, 0.35);
+          background: rgba(99, 102, 241, 0.08);
+          font-size: 12px;
+          font-weight: 600;
+          color: #6366f1;
+        }
+        .chat-editing-banner span {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .chat-editing-cancel {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          border: none;
+          background: transparent;
+          color: inherit;
+          font: inherit;
+          font-weight: 600;
+          cursor: pointer;
+          padding: 2px 6px;
+          border-radius: 6px;
+        }
+        .chat-editing-cancel:hover {
+          background: rgba(99, 102, 241, 0.15);
+        }
+      `}</style>
     </main>
   );
 }
