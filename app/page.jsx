@@ -908,7 +908,7 @@ function AIPlayground({ chat }) {
       action={
         <span className="tiny-action live-pill">
           <Bot size={14} />
-          Ask Abdul
+          Ask about Hanan
         </span>
       }
     >
@@ -993,7 +993,7 @@ function AIPlayground({ chat }) {
                 ? "Edit your message..."
                 : "Ask about Abdul's work..."
             }
-            aria-label="Ask Abdul's AI assistant"
+            aria-label="Ask Abdul Hanan's AI assistant"
           />
           <button
             type="submit"
@@ -1036,12 +1036,12 @@ function FloatingChatWidget({ open, setOpen, chat }) {
         <div
           className="floating-chat-panel"
           role="dialog"
-          aria-label="Ask Abdul's AI assistant"
+          aria-label="Ask My AI assistant"
         >
           <div className="floating-chat-header">
             <span className="floating-chat-title">
               <Bot size={16} />
-              Ask Abdul&apos;s AI
+              Ask Abdul Hanan's AI
             </span>
             <button
               type="button"
@@ -1078,19 +1078,6 @@ function FloatingChatWidget({ open, setOpen, chat }) {
                 </p>
               </div>
             )}
-          </div>
-
-          <div className="suggested-prompts floating-chat-prompts">
-            {suggestedPrompts.map((prompt) => (
-              <button
-                type="button"
-                key={prompt}
-                onClick={() => chat.send(prompt)}
-                disabled={chat.thinking}
-              >
-                {prompt}
-              </button>
-            ))}
           </div>
 
           {chat.editingId && (
