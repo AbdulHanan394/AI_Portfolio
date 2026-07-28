@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  portfolio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    image: portfolio:latest
+
+    ports:
+      - "3000:3000"
+
+    restart: unless-stopped
