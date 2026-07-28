@@ -561,6 +561,7 @@ function TopBar({ theme, setTheme }) {
       ? "translateY(-1px) scale(1.05)"
       : "translateY(0) scale(1)",
     transition: "transform 0.2s ease, box-shadow 0.2s ease",
+
     textDecoration: "none",
   };
 
