@@ -1,6 +1,6 @@
 "use client";
 import Markdown from "react-markdown";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Copy,
   Check,
@@ -13,6 +13,9 @@ import {
   ChevronRight,
   X,
   Pencil,
+  Menu,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { FaGithub, FaLinkedin, FaXTwitter, FaEnvelope } from "react-icons/fa6";
 import {
@@ -237,18 +240,456 @@ function Section({ title, children, action, id }) {
   );
 }
 
-function ThemeButton({ theme, setTheme }) {
+function ThemeButton({ theme, setTheme, fullWidth = false }) {
+  const isDark = theme === "dark";
+  const [hover, setHover] = useState(false);
+
+  const wrapStyle = {
+    position: "relative",
+    display: "inline-flex",
+    width: "16px",
+    height: "16px",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  };
+
+  const iconBaseStyle = {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    transition:
+      "transform 0.35s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.25s ease",
+  };
+
+  // Sun/moon now pull from the theme's own accent tokens instead of a
+  // one-off amber/indigo pair — gold for sun, accent blue for moon.
+  const sunStyle = {
+    ...iconBaseStyle,
+    color: "var(--gold)",
+    opacity: isDark ? 0 : 1,
+    transform: isDark ? "rotate(-90deg) scale(0.5)" : "rotate(0deg) scale(1)",
+  };
+
+  const moonStyle = {
+    ...iconBaseStyle,
+    color: "var(--accent)",
+    opacity: isDark ? 1 : 0,
+    transform: isDark ? "rotate(0deg) scale(1)" : "rotate(90deg) scale(0.5)",
+  };
+
+  const buttonStyle = {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: fullWidth ? "center" : "flex-start",
+    gap: "8px",
+    width: fullWidth ? "100%" : "auto",
+    padding: fullWidth ? "11px 14px" : "7px 12px",
+    borderRadius: "999px",
+    border: "1px solid var(--line)",
+    background: hover ? "var(--surface-3)" : "var(--surface-2)",
+    color: "var(--text)",
+    fontSize: "13px",
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "background 0.15s ease, border-color 0.15s ease",
+  };
+
   return (
     <button
-      className="theme-button"
       type="button"
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      style={buttonStyle}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onClick={() => setTheme(isDark ? "light" : "dark")}
       aria-label="Toggle theme"
       title="Toggle theme"
     >
-      <Icon>{theme === "dark" ? "L" : "D"}</Icon>
-      <span>{theme === "dark" ? "Light" : "Dark"}</span>
+      <span style={wrapStyle}>
+        <Sun size={16} style={sunStyle} />
+        <Moon size={16} style={moonStyle} />
+      </span>
+      <span>{isDark ? "Light" : "Dark"}</span>
     </button>
+  );
+}
+
+// NavLink component (defined later for the top navigation)
+
+// ---------------------------------------------------------------------------
+// Sticky top navigation bar. Glassy on scroll, scroll-spy highlighted
+// links with an animated underline, and a slide-down mobile menu with
+// scroll-lock + click-outside-to-close.
+// ---------------------------------------------------------------------------
+const NAV_LINKS = [
+  { href: "#about", label: "About" },
+  { href: "#ai-playground", label: "AI Assistant" },
+  { href: "#activity-intelligence", label: "Activity" },
+  { href: "#projects", label: "Projects" },
+  { href: "#experience", label: "Experience" },
+  { href: "#skills", label: "Skills" },
+];
+
+function NavLink({ href, label, isActive, isMobile, onNavigate }) {
+  const [hover, setHover] = useState(false);
+  const underlineOn = hover || isActive;
+
+  const linkStyle = isMobile
+    ? {
+        position: "relative",
+        display: "block",
+        margin: 0,
+        padding: "13px 14px",
+        borderRadius: "10px",
+        fontSize: "15px",
+        fontWeight: 600,
+        color: "inherit",
+        opacity: isActive ? 1 : 0.68,
+        textDecoration: "none",
+        background: isActive
+          ? "rgba(99, 102, 241, 0.14)"
+          : hover
+            ? "rgba(99, 102, 241, 0.1)"
+            : "transparent",
+        transition: "opacity 0.2s ease, color 0.2s ease, background 0.15s ease",
+      }
+    : {
+        position: "relative",
+        display: "inline-block",
+        padding: "7px 4px",
+        margin: "0 10px",
+        fontSize: "13.5px",
+        fontWeight: 600,
+        color: isActive || hover ? "#6366f1" : "inherit",
+        opacity: isActive || hover ? 1 : 0.68,
+        textDecoration: "none",
+        whiteSpace: "nowrap",
+        transition: "opacity 0.2s ease, color 0.2s ease",
+      };
+
+  const underlineStyle = isMobile
+    ? {
+        content: '""',
+        position: "absolute",
+        left: "14px",
+        right: "14px",
+        bottom: "6px",
+        height: "2px",
+        borderRadius: "2px",
+        background: "linear-gradient(90deg, #6366f1, #0ea5e9)",
+        transform: underlineOn ? "scaleX(1)" : "scaleX(0)",
+        transformOrigin: "center",
+        transition: "transform 0.28s cubic-bezier(0.65, 0, 0.35, 1)",
+      }
+    : {
+        content: '""',
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: "2px",
+        height: "2px",
+        borderRadius: "2px",
+        background: "linear-gradient(90deg, #6366f1, #0ea5e9)",
+        transform: underlineOn ? "scaleX(1)" : "scaleX(0)",
+        transformOrigin: "center",
+        transition: "transform 0.28s cubic-bezier(0.65, 0, 0.35, 1)",
+      };
+
+  return (
+    <a
+      href={href}
+      style={linkStyle}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onClick={onNavigate}
+    >
+      {label}
+      <span style={underlineStyle} aria-hidden="true" />
+    </a>
+  );
+}
+
+function TopBar({ theme, setTheme }) {
+  const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [activeId, setActiveId] = useState("about");
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTiny, setIsTiny] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(62);
+  const [brandHover, setBrandHover] = useState(false);
+  const [toggleHover, setToggleHover] = useState(false);
+  const navRef = useRef(null);
+  const headerRef = useRef(null);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useLayoutEffect(() => {
+    const mobileQuery = window.matchMedia("(max-width: 860px)");
+    const tinyQuery = window.matchMedia("(max-width: 380px)");
+
+    const updateMobile = () => setIsMobile(mobileQuery.matches);
+    const updateTiny = () => setIsTiny(tinyQuery.matches);
+
+    updateMobile();
+    updateTiny();
+
+    mobileQuery.addEventListener("change", updateMobile);
+    tinyQuery.addEventListener("change", updateTiny);
+    return () => {
+      mobileQuery.removeEventListener("change", updateMobile);
+      tinyQuery.removeEventListener("change", updateTiny);
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const update = () => setHeaderHeight(el.getBoundingClientRect().height);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [isMobile, scrolled]);
+
+  useEffect(() => {
+    const sections = NAV_LINKS.map((l) =>
+      document.getElementById(l.href.slice(1)),
+    ).filter(Boolean);
+    if (!sections.length) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActiveId(entry.target.id);
+        });
+      },
+      { rootMargin: "-45% 0px -45% 0px", threshold: 0 },
+    );
+    sections.forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onClick = (e) => {
+      if (navRef.current && !navRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
+
+  // Outer header: sticky positioning only — no filter here, so it does
+  // NOT become the containing block for the fixed mobile nav below.
+  const headerOuterStyle = {
+    position: "sticky",
+    top: 0,
+    zIndex: 9998,
+  };
+
+  // Inner bar: carries the blur + theme surface/line tokens instead of
+  // one-off rgba(15,23,42,...) / rgba(255,255,255,...) values.
+  const headerBarStyle = {
+    backdropFilter: "blur(16px) saturate(180%)",
+    WebkitBackdropFilter: "blur(16px) saturate(180%)",
+    background: "color-mix(in srgb, var(--surface) 85%, transparent)",
+    borderBottom: "1px solid var(--line)",
+    boxShadow: scrolled ? "0 10px 28px -14px rgba(0, 0, 0, .35)" : "none",
+    transition: "box-shadow 0.25s ease, background 0.2s ease",
+  };
+
+  const innerStyle = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between", // ← add this line
+    gap: isMobile ? "10px" : "20px",
+    maxWidth: "1400px",
+    margin: "0 auto",
+    padding: isMobile
+      ? scrolled
+        ? "8px 18px"
+        : "10px 18px"
+      : scrolled
+        ? "8px 32px"
+        : "12px 32px",
+    transition: "padding 0.25s ease",
+  };
+
+  // Brand mark now uses the accent → accent-strong ramp so it reads as
+  // "LinkedIn-blue" in both themes instead of a fixed indigo/sky chip.
+  const brandStyle = {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "38px",
+    height: "38px",
+    flexShrink: 0,
+    borderRadius: "10px",
+    fontWeight: 800,
+    fontSize: isTiny ? "13px" : "14px",
+    letterSpacing: "0.02em",
+    color: "#fff",
+    background:
+      "linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%)",
+    boxShadow: brandHover
+      ? "0 6px 20px -4px color-mix(in srgb, var(--accent-strong) 55%, transparent)"
+      : "0 4px 14px -4px color-mix(in srgb, var(--accent-strong) 45%, transparent)",
+    transform: brandHover
+      ? "translateY(-1px) scale(1.05)"
+      : "translateY(0) scale(1)",
+    transition: "transform 0.2s ease, box-shadow 0.2s ease",
+    textDecoration: "none",
+  };
+
+  const navStyle = isMobile
+    ? {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "stretch",
+        gap: "10px",
+        position: "fixed",
+        top: `${headerHeight}px`,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        maxHeight: "none",
+        overflowY: "auto",
+        overscrollBehavior: "contain",
+        WebkitOverflowScrolling: "touch",
+        padding: "12px 16px calc(24px + env(safe-area-inset-bottom))",
+        background: "color-mix(in srgb, var(--surface) 97%, transparent)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        borderTop: "1px solid var(--line)",
+        transform: menuOpen ? "translateY(0)" : "translateY(-8px)",
+        opacity: menuOpen ? 1 : 0,
+        visibility: menuOpen ? "visible" : "hidden",
+        pointerEvents: menuOpen ? "auto" : "none",
+        transition:
+          "transform 0.22s ease, opacity 0.22s ease, visibility 0.22s",
+        zIndex: 9999,
+      }
+    : {
+        display: "flex",
+        alignItems: "center",
+        gap: "2px",
+        flex: 1,
+        justifyContent: "center",
+      };
+
+  const actionsStyle = {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    flexShrink: 0,
+  };
+
+  const toggleStyle = {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "38px",
+    height: "38px",
+    borderRadius: "9px",
+    border: "1px solid var(--line)",
+    background: toggleHover ? "var(--surface-3)" : "var(--surface-2)",
+    color: "var(--text)",
+    cursor: "pointer",
+    transition: "background 0.15s ease, border-color 0.15s ease",
+    flexShrink: 0,
+  };
+
+  const mobileThemeWrapStyle = {
+    marginTop: "10px",
+    paddingTop: "14px",
+    borderTop: "1px solid var(--line)",
+  };
+
+  const navLinksNode = NAV_LINKS.map((link) => (
+    <NavLink
+      key={link.href}
+      href={link.href}
+      label={link.label}
+      isActive={activeId === link.href.slice(1)}
+      isMobile={isMobile}
+      onNavigate={() => setMenuOpen(false)}
+    />
+  ));
+
+  return (
+    <header ref={headerRef} style={headerOuterStyle}>
+      <div ref={navRef}>
+        <div style={headerBarStyle}>
+          <div style={innerStyle}>
+            <a
+              href="#top"
+              aria-label="Portfolio home"
+              style={brandStyle}
+              onMouseEnter={() => setBrandHover(true)}
+              onMouseLeave={() => setBrandHover(false)}
+              onClick={() => setMenuOpen(false)}
+            >
+              <span>AH</span>
+            </a>
+
+            {!isMobile && (
+              <nav style={navStyle} aria-label="Portfolio sections">
+                {navLinksNode}
+              </nav>
+            )}
+
+            <div style={actionsStyle}>
+              {!isMobile && <ThemeButton theme={theme} setTheme={setTheme} />}
+              {isMobile && (
+                <button
+                  type="button"
+                  style={toggleStyle}
+                  onMouseEnter={() => setToggleHover(true)}
+                  onMouseLeave={() => setToggleHover(false)}
+                  onClick={() => setMenuOpen((v) => !v)}
+                  aria-label="Toggle navigation menu"
+                  aria-expanded={menuOpen}
+                >
+                  {menuOpen ? <X size={20} /> : <Menu size={20} />}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {isMobile && (
+          <nav style={navStyle} aria-label="Portfolio sections">
+            {navLinksNode}
+            <div style={mobileThemeWrapStyle}>
+              <ThemeButton theme={theme} setTheme={setTheme} fullWidth />
+            </div>
+          </nav>
+        )}
+      </div>
+    </header>
   );
 }
 
@@ -1306,20 +1747,7 @@ export default function PortfolioPage() {
 
   return (
     <main className={`page theme-${theme}`}>
-      <header className="topbar">
-        <a className="brand" href="#top" aria-label="Portfolio home">
-          <span>AH</span>
-        </a>
-        <nav aria-label="Portfolio sections">
-          <a href="#about">About</a>
-          <a href="#ai-playground">AI Assistant</a>
-          <a href="#activity-intelligence">Activity</a>
-          <a href="#projects">Projects</a>
-          <a href="#experience">Experience</a>
-          <a href="#skills">Skills</a>
-        </nav>
-        <ThemeButton theme={theme} setTheme={setTheme} />
-      </header>
+      <TopBar theme={theme} setTheme={setTheme} />
 
       <div className="shell" id="top">
         <StickySnapshot />
@@ -1555,6 +1983,9 @@ export default function PortfolioPage() {
       <FloatingChatWidget open={chatOpen} setOpen={setChatOpen} chat={chat} />
 
       <style jsx global>{`
+        /* ---------------------------------------------------------------
+           Chat components
+        --------------------------------------------------------------- */
         .chat-bubble-wrap {
           position: relative;
           display: flex;
