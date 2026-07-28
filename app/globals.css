@@ -886,10 +886,6 @@ small {
   }
 }
 
-@media (max-width: 430px) {
-  .topbar {
-    padding: 8px;
-  }
 
   .theme-button span {
     display: none;
