@@ -2139,11 +2139,23 @@ button.outline-pill {
   margin-bottom: 12px;
 }
 
-.markdown a {
+.markdown-content a {
   text-decoration: underline;
   font-weight: 700;
 }
 
-.markdown a:hover {
+.markdown-content a:hover {
   text-decoration: underline;
+}
+
+.markdown-link {
+  text-decoration: underline;
+  font-weight: 700;
+  color: inherit;
+  /* keeps your theme color */
+}
+
+.markdown-link:hover {
+  text-decoration: underline;
+  opacity: 0.85;
 }

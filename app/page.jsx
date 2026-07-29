@@ -176,8 +176,6 @@ function timeAgo(dateStr) {
 const suggestedPrompts = [
   "What has Abdul built recently?",
   "What's Abdul's AI stack?",
-  "Is Abdul open to work?",
-  "Tell me about FocusSpark",
 ];
 
 // Local fallback answers, only used if the live /assistant/query call fails
@@ -1313,7 +1311,12 @@ function ChatBubble({
             <Markdown
               components={{
                 a: ({ node, ...props }) => (
-                  <a {...props} target="_blank" rel="noopener noreferrer" />
+                  <a
+                    {...props}
+                    className="markdown-link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  />
                 ),
               }}
             >
