@@ -1,6 +1,13 @@
 "use client";
 import Markdown from "react-markdown";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Copy,
   Check,
@@ -17,7 +24,13 @@ import {
   Sun,
   Moon,
 } from "lucide-react";
-import { FaGithub, FaLinkedin, FaXTwitter, FaEnvelope } from "react-icons/fa6";
+import {
+  FaGithub,
+  FaLinkedin,
+  FaUser,
+  FaXTwitter,
+  FaEnvelope,
+} from "react-icons/fa6";
 import {
   askAssistant,
   getHealth,
@@ -124,13 +137,29 @@ const fallbackProjects = [
 ];
 
 const sourceMeta = {
-  github: { label: "GitHub", icon: FaGithub, className: "source-github" },
+  github: {
+    label: "GitHub",
+    icon: FaGithub,
+    className: "source-github",
+  },
+
   linkedin: {
     label: "LinkedIn",
     icon: FaLinkedin,
     className: "source-linkedin",
   },
-  x: { label: "X", icon: FaXTwitter, className: "source-x" },
+
+  x: {
+    label: "X",
+    icon: FaXTwitter,
+    className: "source-x",
+  },
+
+  portfolio: {
+    label: "Portfolio",
+    icon: FaUser,
+    className: "source-portfolio",
+  },
 };
 
 function timeAgo(dateStr) {
@@ -184,6 +213,40 @@ function Icon({ children }) {
       {children}
     </span>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Chat auto-scroll behavior:
+//
+// We only want to snap the chat window to the bottom in two situations:
+//   1. Right after the user sends a message (so they can see what they just
+//      sent, plus the "typing…" indicator).
+//   2. The instant the "typing…" indicator appears.
+//
+// We deliberately do NOT auto-scroll when the assistant's reply actually
+// lands, because that reply can be long — jumping straight to the bottom of
+// it would skip past the start of the answer. Once the user has scrolled to
+// read a response, we leave the scroll position alone and let them scroll
+// manually.
+// ---------------------------------------------------------------------------
+function useAutoScrollOnSend(scrollRef, messages, thinking) {
+  const prevLenRef = useRef(messages.length);
+  const prevThinkingRef = useRef(thinking);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    const lastMessage = messages[messages.length - 1];
+    const grew = messages.length > prevLenRef.current;
+    const thinkingJustStarted = thinking && !prevThinkingRef.current;
+    const isNewUserMessage = grew && lastMessage?.role === "user";
+
+    if (el && (isNewUserMessage || thinkingJustStarted)) {
+      el.scrollTop = el.scrollHeight;
+    }
+
+    prevLenRef.current = messages.length;
+    prevThinkingRef.current = thinking;
+  }, [messages, thinking, scrollRef]);
 }
 
 function Slider({ children, ariaLabel }) {
@@ -936,7 +999,10 @@ function ActivityIntelligence() {
 
       <Slider ariaLabel="Activity intelligence feed">
         {filtered.map((item) => {
-          const meta = sourceMeta[item.source] || sourceMeta.github;
+          const meta =
+            item.type === "linkedin_post"
+              ? sourceMeta.linkedin
+              : sourceMeta[item.source] || sourceMeta.portfolio;
           const SourceIcon = meta.icon;
           return (
             <article className="intel-card slide-item" key={item.id}>
@@ -1242,8 +1308,18 @@ function ChatBubble({
         </span>
       )}
       <div className="chat-bubble-wrap">
-        <div className="markdown-content">
-          <Markdown>{message.content}</Markdown>
+        <div className="chat-bubble-wrap">
+          <div className="markdown-content">
+            <Markdown
+              components={{
+                a: ({ node, ...props }) => (
+                  <a {...props} target="_blank" rel="noopener noreferrer" />
+                ),
+              }}
+            >
+              {message.content}
+            </Markdown>
+          </div>
         </div>
 
         {isBeingEdited && (
@@ -1338,10 +1414,10 @@ function ChatBubble({
 function AIPlayground({ chat }) {
   const scrollRef = useRef(null);
 
-  useEffect(() => {
-    if (scrollRef.current)
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [chat.messages, chat.thinking]);
+  // Scroll to bottom right when the user sends a message (and when the
+  // typing indicator appears) — but not once the assistant's reply lands,
+  // so a long response doesn't yank the view down past its opening lines.
+  useAutoScrollOnSend(scrollRef, chat.messages, chat.thinking);
 
   return (
     <Section
@@ -1459,10 +1535,17 @@ function AIPlayground({ chat }) {
 function FloatingChatWidget({ open, setOpen, chat }) {
   const scrollRef = useRef(null);
 
+  // Same rule as the inline playground: snap to bottom on send / when the
+  // typing indicator shows up, but don't re-snap once the reply arrives.
+  useAutoScrollOnSend(scrollRef, chat.messages, chat.thinking);
+
+  // When the panel is opened, jump straight to the latest message once so
+  // the user isn't dropped at the top of an old conversation.
   useEffect(() => {
-    if (open && scrollRef.current)
+    if (open && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [chat.messages, chat.thinking, open]);
+    }
+  }, [open]);
 
   useEffect(() => {
     const onKeyDown = (e) => {
