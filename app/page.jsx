@@ -23,6 +23,7 @@ import {
   Menu,
   Sun,
   Moon,
+  GraduationCap,
 } from "lucide-react";
 import {
   FaGithub,
@@ -787,7 +788,9 @@ function ProfileHero({ onAskAI }) {
         </div>
         <div className="profile-orgs">
           <p>
-            <span className="org-mark blue">U</span>
+            <span className="org-mark blue">
+              <GraduationCap size={16} color="#fff" />
+            </span>
             {profile.university}
           </p>
         </div>
@@ -1945,7 +1948,9 @@ export default function PortfolioPage() {
 
           <Section title="Education">
             <article className="education">
-              <span className="school-logo">U</span>
+              <span className="school-logo">
+                <GraduationCap size={22} color="#fff" />
+              </span>
               <div>
                 <h3>{profile.university}</h3>
                 <p>Bachelor of Science, Computer Software Engineering</p>
