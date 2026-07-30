@@ -36,8 +36,8 @@ a {
   --text: #e7e9ea;
   --muted: #a9b0b6;
   --quiet: #7f8a94;
-  --accent: #70b5f9;
-  --accent-strong: #0a66c2;
+  --accent: #19c996;
+  --accent-strong: #0c7a5c;
   --green: #19c996;
   --gold: #f3c968;
   --rose: #dc7d8d;
@@ -56,8 +56,8 @@ a {
   --text: #191919;
   --muted: #59636d;
   --quiet: #767676;
-  --accent: #0a66c2;
-  --accent-strong: #004182;
+  --accent: #0f8f68;
+  --accent-strong: #0b6b4e;
   --green: #0f8f68;
   --gold: #9c6d0a;
   --rose: #a64556;
@@ -100,7 +100,7 @@ a {
 }
 
 .cover::after {
- 
+
   content: "";
   inset: 0;
   position: absolute;
@@ -564,11 +564,25 @@ small {
   background-size: 210%;
 }
 
-.tone-1 { background: linear-gradient(145deg, #f2d2be, #5e7282); }
-.tone-2 { background: linear-gradient(145deg, #9ed9cf, #304b61); }
-.tone-3 { background: linear-gradient(145deg, #d9b8f5, #37436a); }
-.tone-4 { background: linear-gradient(145deg, #f1cf78, #34515f); }
-.tone-5 { background: linear-gradient(145deg, #ef9b8e, #40495c); }
+.tone-1 {
+  background: linear-gradient(145deg, #f2d2be, #5e7282);
+}
+
+.tone-2 {
+  background: linear-gradient(145deg, #9ed9cf, #304b61);
+}
+
+.tone-3 {
+  background: linear-gradient(145deg, #d9b8f5, #37436a);
+}
+
+.tone-4 {
+  background: linear-gradient(145deg, #f1cf78, #34515f);
+}
+
+.tone-5 {
+  background: linear-gradient(145deg, #ef9b8e, #40495c);
+}
 
 .sticky-snapshot,
 .right-rail {
@@ -619,7 +633,7 @@ small {
 }
 
 .sticky-avatar {
-   align-items: center;
+  align-items: center;
   background: #07100d;
   border: 5px solid var(--surface);
   border-radius: 999px;
@@ -635,7 +649,7 @@ small {
 }
 
 .sticky-avatar img {
-   height: 100%;
+  height: 100%;
   object-fit: cover;
   object-position: 24% 42%;
   transform: scale(1.6);
@@ -842,6 +856,7 @@ small {
     font-size: 16px;
   }
 }
+
 .linkedin-btn {
   display: inline-flex;
   align-items: center;
@@ -852,7 +867,7 @@ small {
   text-decoration: none;
   font-weight: 600;
   transition: all 0.3s ease;
-margin-top: 5%;
+  margin-top: 5%;
   background: var(--green);
   border: 1px solid var(--green);
   color: #052217;
@@ -871,6 +886,7 @@ margin-top: 5%;
   outline: 2px solid var(--green);
   outline-offset: 3px;
 }
+
 .activity-card {
   display: flex;
   flex-direction: column;
@@ -879,14 +895,16 @@ margin-top: 5%;
 
 .activity-card .linkedin-btn {
   margin-top: auto;
-  align-self: flex-start; /* or stretch if you want full width */
+  align-self: flex-start;
+  /* or stretch if you want full width */
 }
+
 .footer {
 
   padding: 32px;
   border-top: 1px solid var(--line);
   background: var(--surface);
-  border-radius: 20px ;
+  border-radius: 20px;
 }
 
 .footer-content {
@@ -989,12 +1007,6 @@ margin-top: 5%;
   color: #052217;
   transform: translateY(-4px);
 }
-/* ===========================================================================
-   Activity Intelligence + AI Playground
-   Appended to globals.css — reuses existing theme tokens (--surface,
-   --surface-2, --surface-3, --line, --text, --muted, --accent, --green, etc.)
-   so both sections inherit the light/dark theme automatically.
-=========================================================================== */
 
 .live-pill {
   align-items: center;
@@ -1015,8 +1027,6 @@ margin-top: 5%;
   font-size: 14px;
   margin-bottom: 16px;
 }
-
-/* ---------- Activity Intelligence grid ---------- */
 
 .intel-grid {
   display: grid;
@@ -1065,6 +1075,11 @@ margin-top: 5%;
 .source-x {
   background: color-mix(in srgb, var(--rose) 20%, transparent);
   color: var(--rose);
+}
+
+.source-portfolio {
+  background: color-mix(in srgb, var(--gold) 20%, transparent);
+  color: var(--gold);
 }
 
 .intel-type {
@@ -1128,551 +1143,6 @@ margin-top: 5%;
 .intel-link {
   margin-top: auto;
 }
-
-/* ---------- AI Playground ---------- */
-
-.chat-shell {
-  display: grid;
-  gap: 12px;
-}
-
-.chat-window {
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  height: 320px;
-  overflow-y: auto;
-  padding: 16px;
-}
-
-.chat-message {
-  display: flex;
-  gap: 8px;
-  max-width: 82%;
-}
-
-.chat-message p {
-  border-radius: 12px;
-  font-size: 14px;
-  line-height: 1.45;
-  margin: 0;
-  padding: 10px 14px;
-}
-
-.chat-message.assistant {
-  align-self: flex-start;
-}
-
-.chat-message.assistant p {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-top-left-radius: 4px;
-  color: var(--text);
-}
-
-.chat-message.user {
-  align-self: flex-end;
-}
-
-.chat-message.user p {
-  background: var(--accent-strong);
-  border-top-right-radius: 4px;
-  color: #fff;
-}
-
-.chat-avatar {
-  align-items: center;
-  background: var(--green);
-  border-radius: 999px;
-  color: #052217;
-  display: flex;
-  flex: 0 0 auto;
-  height: 28px;
-  justify-content: center;
-  width: 28px;
-}
-
-.chat-typing {
-  align-items: center;
-  display: flex;
-  gap: 4px;
-}
-
-.chat-typing span {
-  animation: chat-typing-bounce 1.1s infinite ease-in-out;
-  background: var(--quiet);
-  border-radius: 999px;
-  display: inline-block;
-  height: 6px;
-  width: 6px;
-}
-
-.chat-typing span:nth-child(2) { animation-delay: .15s; }
-.chat-typing span:nth-child(3) { animation-delay: .3s; }
-
-@keyframes chat-typing-bounce {
-  0%, 60%, 100% { transform: translateY(0); opacity: .5; }
-  30% { transform: translateY(-4px); opacity: 1; }
-}
-
-.suggested-prompts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.suggested-prompts button {
-  background: transparent;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 7px 13px;
-  transition: border-color 150ms ease, color 150ms ease;
-}
-
-.suggested-prompts button:hover:not(:disabled) {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.suggested-prompts button:disabled {
-  cursor: not-allowed;
-  opacity: .5;
-}
-
-.chat-input-row {
-  display: flex;
-  gap: 8px;
-}
-
-.chat-input-row input {
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  color: var(--text);
-  flex: 1;
-  font-size: 14px;
-  min-height: 42px;
-  padding: 0 16px;
-}
-
-.chat-input-row input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.chat-send {
-  align-items: center;
-  background: var(--green);
-  border: none;
-  border-radius: 999px;
-  color: #052217;
-  cursor: pointer;
-  display: flex;
-  height: 42px;
-  justify-content: center;
-  transition: filter 150ms ease, transform 150ms ease;
-  width: 42px;
-}
-
-.chat-send:hover:not(:disabled) {
-  filter: brightness(0.95);
-  transform: translateY(-1px);
-}
-
-.chat-send:disabled {
-  cursor: not-allowed;
-  opacity: .5;
-}
-
-/* ---------- Floating chat widget ---------- */
-
-button.outline-pill {
-  background: transparent;
-  font: inherit;
-}
-
-.playground-open-btn {
-  border: none;
-  margin-top: 16px;
-}
-
-.floating-chat {
-  bottom: 22px;
-  position: fixed;
-  right: 22px;
-  z-index: 60;
-}
-
-.floating-chat-fab {
-  align-items: center;
-  background: var(--green);
-  border: none;
-  border-radius: 999px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, .3);
-  color: #052217;
-  cursor: pointer;
-  display: flex;
-  height: 56px;
-  justify-content: center;
-  margin-left: auto;
-  position: relative;
-  transition: transform 150ms ease, filter 150ms ease;
-  width: 56px;
-}
-
-.floating-chat-fab:hover {
-  filter: brightness(0.95);
-  transform: translateY(-2px);
-}
-
-.floating-chat-fab.is-open {
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  color: var(--text);
-}
-
-.fab-pulse {
-  animation: fab-pulse-ring 2.2s infinite;
-  border: 2px solid var(--green);
-  border-radius: 999px;
-  inset: 0;
-  pointer-events: none;
-  position: absolute;
-}
-
-@keyframes fab-pulse-ring {
-  0% { transform: scale(1); opacity: .7; }
-  80% { transform: scale(1.5); opacity: 0; }
-  100% { transform: scale(1.5); opacity: 0; }
-}
-
-.floating-chat-panel {
-  animation: floating-chat-in 180ms ease;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, .35);
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 14px;
-  max-height: min(72vh, 560px);
-  overflow: hidden;
-  width: min(360px, calc(100vw - 44px));
-}
-
-@keyframes floating-chat-in {
-  from { opacity: 0; transform: translateY(12px) scale(.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.floating-chat-header {
-  align-items: center;
-  background: var(--surface-2);
-  border-bottom: 1px solid var(--line);
-  display: flex;
-  justify-content: space-between;
-  padding: 14px 16px;
-}
-
-.floating-chat-title {
-  align-items: center;
-  color: var(--text);
-  display: inline-flex;
-  font-weight: 800;
-  gap: 8px;
-}
-
-.floating-chat-close {
-  align-items: center;
-  background: transparent;
-  border: none;
-  color: var(--muted);
-  cursor: pointer;
-  display: flex;
-  height: 28px;
-  justify-content: center;
-  width: 28px;
-}
-
-.floating-chat-close:hover {
-  color: var(--text);
-}
-
-.floating-chat-window {
-  border: none;
-  border-radius: 0;
-  flex: 1;
-  height: auto;
-  min-height: 220px;
-}
-
-.floating-chat-prompts {
-  border-top: 1px solid var(--line);
-  padding: 10px 12px 0;
-}
-
-.floating-chat-input {
-  padding: 12px;
-}
-
-@media (max-width: 430px) {
-  .floating-chat {
-    bottom: 14px;
-    right: 14px;
-  }
-
-  .floating-chat-panel {
-    width: calc(100vw - 28px);
-  }
-}
-
-/* ---------- Slider (Posts + Activity Intelligence) ---------- */
-
-.slider-wrap {
-  position: relative;
-}
-
-.slider-track {
-  display: flex;
-  gap: 14px;
-  overflow-x: auto;
-  padding: 2px 2px 10px;
-  scroll-behavior: smooth;
-  scroll-padding: 2px;
-  scroll-snap-type: x mandatory;
-  scrollbar-color: var(--line) transparent;
-  scrollbar-width: thin;
-}
-
-.slider-track::-webkit-scrollbar {
-  height: 6px;
-}
-
-.slider-track::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.slider-track::-webkit-scrollbar-thumb {
-  background: var(--line);
-  border-radius: 999px;
-}
-
-.slide-item {
-  flex: 0 0 auto;
-  scroll-snap-align: start;
-}
-
-.slider-track .intel-card {
-  width: min(340px, 84vw);
-}
-
-.slider-track .activity-card {
-  width: min(320px, 84vw);
-}
-
-.slider-arrow {
-  align-items: center;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
-  color: var(--text);
-  cursor: pointer;
-  display: flex;
-  height: 36px;
-  justify-content: center;
-  position: absolute;
-  top: 40%;
-  transform: translateY(-50%);
-  transition: background 150ms ease, border-color 150ms ease;
-  width: 36px;
-  z-index: 2;
-}
-
-.slider-arrow:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.slider-arrow-left {
-  left: -6px;
-}
-
-.slider-arrow-right {
-  right: -6px;
-}
-
-@media (max-width: 680px) {
-  .slider-arrow {
-    display: none;
-  }
-
-  .slider-track {
-    padding-inline: 2px;
-  }
-}
-
-/* ---------- Responsive ---------- */
-
-@media (max-width: 680px) {
-  .intel-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .chat-window {
-    height: 280px;
-  }
-
-  .chat-message {
-    max-width: 92%;
-  }
-}
-/* ===========================================================================
-   Activity Intelligence + AI Playground
-   Appended to globals.css — reuses existing theme tokens (--surface,
-   --surface-2, --surface-3, --line, --text, --muted, --accent, --green, etc.)
-   so both sections inherit the light/dark theme automatically.
-=========================================================================== */
-
-.live-pill {
-  align-items: center;
-  display: inline-flex;
-  gap: 7px;
-}
-
-.live-dot {
-  background: var(--green);
-  border-radius: 999px;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 25%, transparent);
-  display: inline-block;
-  height: 7px;
-  width: 7px;
-}
-
-.intel-lede {
-  font-size: 14px;
-  margin-bottom: 16px;
-}
-
-/* ---------- Activity Intelligence grid ---------- */
-
-.intel-grid {
-  display: grid;
-  gap: 14px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.intel-card {
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  padding: 16px;
-}
-
-.intel-card-head {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.source-badge {
-  align-items: center;
-  border-radius: 999px;
-  display: inline-flex;
-  font-size: 12px;
-  font-weight: 800;
-  gap: 6px;
-  padding: 5px 10px;
-}
-
-.source-github {
-  background: color-mix(in srgb, var(--text) 10%, transparent);
-  color: var(--text);
-}
-
-.source-linkedin {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent);
-}
-
-.source-x {
-  background: color-mix(in srgb, var(--rose) 20%, transparent);
-  color: var(--rose);
-}
-
-.intel-type {
-  color: var(--quiet);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.intel-date {
-  color: var(--quiet);
-  font-size: 12px;
-  margin-left: auto;
-}
-
-.intel-card h3 {
-  font-size: 16px;
-  line-height: 1.3;
-  margin: 0 0 10px;
-}
-
-.ai-summary {
-  background: var(--surface);
-  border: 1px dashed var(--line);
-  border-radius: 6px;
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-  padding: 10px 12px;
-}
-
-.ai-summary-icon {
-  color: var(--green);
-  flex: 0 0 auto;
-  margin-top: 3px;
-}
-
-.ai-summary p {
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.45;
-  margin: 0;
-}
-
-.intel-chips {
-  margin-bottom: 14px;
-}
-
-.category-chip {
-  background: color-mix(in srgb, var(--green) 20%, transparent) !important;
-  border-color: var(--green) !important;
-  color: var(--green) !important;
-}
-
-.tech-chip {
-  color: var(--muted) !important;
-  font-weight: 600 !important;
-}
-
-.intel-link {
-  margin-top: auto;
-}
-
-/* ---------- AI Playground ---------- */
 
 .chat-shell {
   display: grid;
@@ -1754,12 +1224,27 @@ button.outline-pill {
   width: 6px;
 }
 
-.chat-typing span:nth-child(2) { animation-delay: .15s; }
-.chat-typing span:nth-child(3) { animation-delay: .3s; }
+.chat-typing span:nth-child(2) {
+  animation-delay: .15s;
+}
+
+.chat-typing span:nth-child(3) {
+  animation-delay: .3s;
+}
 
 @keyframes chat-typing-bounce {
-  0%, 60%, 100% { transform: translateY(0); opacity: .5; }
-  30% { transform: translateY(-4px); opacity: 1; }
+
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: .5;
+  }
+
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
 }
 
 .suggested-prompts {
@@ -1835,11 +1320,14 @@ button.outline-pill {
   opacity: .5;
 }
 
-/* ---------- Floating chat widget ---------- */
-
 button.outline-pill {
   background: transparent;
   font: inherit;
+}
+
+.playground-open-btn {
+  border: none;
+  margin-top: 16px;
 }
 
 .floating-chat {
@@ -1906,9 +1394,20 @@ button.outline-pill {
 }
 
 @keyframes fab-pulse-ring {
-  0% { opacity: .55; transform: scale(1); }
-  75% { opacity: 0; transform: scale(1.45); }
-  100% { opacity: 0; transform: scale(1.45); }
+  0% {
+    opacity: .55;
+    transform: scale(1);
+  }
+
+  75% {
+    opacity: 0;
+    transform: scale(1.45);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.45);
+  }
 }
 
 .floating-chat-panel {
@@ -1926,8 +1425,15 @@ button.outline-pill {
 }
 
 @keyframes floating-chat-in {
-  from { opacity: 0; transform: translateY(16px) scale(.96); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .floating-chat-header {
@@ -2015,8 +1521,6 @@ button.outline-pill {
   }
 }
 
-/* ---------- Slider (Posts + Activity Intelligence) ---------- */
-
 .slider-wrap {
   position: relative;
 }
@@ -2101,8 +1605,6 @@ button.outline-pill {
   }
 }
 
-/* ---------- Responsive ---------- */
-
 @media (max-width: 680px) {
   .intel-grid {
     grid-template-columns: 1fr;
@@ -2116,6 +1618,7 @@ button.outline-pill {
     max-width: 92%;
   }
 }
+
 .markdown-content {
   line-height: 1.6;
 }
@@ -2152,7 +1655,6 @@ button.outline-pill {
   text-decoration: underline;
   font-weight: 700;
   color: inherit;
-  /* keeps your theme color */
 }
 
 .markdown-link:hover {

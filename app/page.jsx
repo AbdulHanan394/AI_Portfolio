@@ -75,11 +75,6 @@ const activities = [
   },
 ];
 
-// ---------------------------------------------------------------------------
-// Fallback data — used only if the live API is unreachable, so the page
-// never shows an empty state to a visitor. Real data comes from
-// GET /api/v1/activities and GET /api/v1/projects via lib/api.ts.
-// ---------------------------------------------------------------------------
 const fallbackActivities = [
   {
     id: "a1",
@@ -178,8 +173,6 @@ const suggestedPrompts = [
   "What's Abdul's AI stack?",
 ];
 
-// Local fallback answers, only used if the live /assistant/query call fails
-// (e.g. backend down). Keeps the chat useful even when offline.
 function askAgentOffline(question) {
   const q = question.toLowerCase();
   if (q.includes("recent") || q.includes("built") || q.includes("working on")) {
@@ -213,20 +206,6 @@ function Icon({ children }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Chat auto-scroll behavior:
-//
-// We only want to snap the chat window to the bottom in two situations:
-//   1. Right after the user sends a message (so they can see what they just
-//      sent, plus the "typing…" indicator).
-//   2. The instant the "typing…" indicator appears.
-//
-// We deliberately do NOT auto-scroll when the assistant's reply actually
-// lands, because that reply can be long — jumping straight to the bottom of
-// it would skip past the start of the answer. Once the user has scrolled to
-// read a response, we leave the scroll position alone and let them scroll
-// manually.
-// ---------------------------------------------------------------------------
 function useAutoScrollOnSend(scrollRef, messages, thinking) {
   const prevLenRef = useRef(messages.length);
   const prevThinkingRef = useRef(thinking);
@@ -323,8 +302,6 @@ function ThemeButton({ theme, setTheme, fullWidth = false }) {
       "transform 0.35s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.25s ease",
   };
 
-  // Sun/moon now pull from the theme's own accent tokens instead of a
-  // one-off amber/indigo pair — gold for sun, accent blue for moon.
   const sunStyle = {
     ...iconBaseStyle,
     color: "var(--gold)",
@@ -375,13 +352,6 @@ function ThemeButton({ theme, setTheme, fullWidth = false }) {
   );
 }
 
-// NavLink component (defined later for the top navigation)
-
-// ---------------------------------------------------------------------------
-// Sticky top navigation bar. Glassy on scroll, scroll-spy highlighted
-// links with an animated underline, and a slide-down mobile menu with
-// scroll-lock + click-outside-to-close.
-// ---------------------------------------------------------------------------
 const NAV_LINKS = [
   { href: "#about", label: "About" },
   { href: "#ai-playground", label: "AI Assistant" },
@@ -408,9 +378,9 @@ function NavLink({ href, label, isActive, isMobile, onNavigate }) {
         opacity: isActive ? 1 : 0.68,
         textDecoration: "none",
         background: isActive
-          ? "rgba(99, 102, 241, 0.14)"
+          ? "color-mix(in srgb, var(--accent) 14%, transparent)"
           : hover
-            ? "rgba(99, 102, 241, 0.1)"
+            ? "color-mix(in srgb, var(--accent) 10%, transparent)"
             : "transparent",
         transition: "opacity 0.2s ease, color 0.2s ease, background 0.15s ease",
       }
@@ -421,7 +391,7 @@ function NavLink({ href, label, isActive, isMobile, onNavigate }) {
         margin: "0 10px",
         fontSize: "13.5px",
         fontWeight: 600,
-        color: isActive || hover ? "#6366f1" : "inherit",
+        color: isActive || hover ? "var(--accent)" : "inherit",
         opacity: isActive || hover ? 1 : 0.68,
         textDecoration: "none",
         whiteSpace: "nowrap",
@@ -437,7 +407,8 @@ function NavLink({ href, label, isActive, isMobile, onNavigate }) {
         bottom: "6px",
         height: "2px",
         borderRadius: "2px",
-        background: "linear-gradient(90deg, #6366f1, #0ea5e9)",
+        background:
+          "linear-gradient(90deg, var(--accent), var(--accent-strong))",
         transform: underlineOn ? "scaleX(1)" : "scaleX(0)",
         transformOrigin: "center",
         transition: "transform 0.28s cubic-bezier(0.65, 0, 0.35, 1)",
@@ -450,7 +421,8 @@ function NavLink({ href, label, isActive, isMobile, onNavigate }) {
         bottom: "2px",
         height: "2px",
         borderRadius: "2px",
-        background: "linear-gradient(90deg, #6366f1, #0ea5e9)",
+        background:
+          "linear-gradient(90deg, var(--accent), var(--accent-strong))",
         transform: underlineOn ? "scaleX(1)" : "scaleX(0)",
         transformOrigin: "center",
         transition: "transform 0.28s cubic-bezier(0.65, 0, 0.35, 1)",
@@ -563,16 +535,12 @@ function TopBar({ theme, setTheme }) {
     };
   }, [menuOpen]);
 
-  // Outer header: sticky positioning only — no filter here, so it does
-  // NOT become the containing block for the fixed mobile nav below.
   const headerOuterStyle = {
     position: "sticky",
     top: 0,
     zIndex: 9998,
   };
 
-  // Inner bar: carries the blur + theme surface/line tokens instead of
-  // one-off rgba(15,23,42,...) / rgba(255,255,255,...) values.
   const headerBarStyle = {
     backdropFilter: "blur(16px) saturate(180%)",
     WebkitBackdropFilter: "blur(16px) saturate(180%)",
@@ -585,7 +553,7 @@ function TopBar({ theme, setTheme }) {
   const innerStyle = {
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between", // ← add this line
+    justifyContent: "space-between",
     gap: isMobile ? "10px" : "20px",
     maxWidth: "1400px",
     margin: "0 auto",
@@ -599,8 +567,6 @@ function TopBar({ theme, setTheme }) {
     transition: "padding 0.25s ease",
   };
 
-  // Brand mark now uses the accent → accent-strong ramp so it reads as
-  // "LinkedIn-blue" in both themes instead of a fixed indigo/sky chip.
   const brandStyle = {
     display: "inline-flex",
     alignItems: "center",
@@ -714,7 +680,37 @@ function TopBar({ theme, setTheme }) {
               onMouseLeave={() => setBrandHover(false)}
               onClick={() => setMenuOpen(false)}
             >
-              <span>AH</span>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                style={{
+                  filter: brandHover
+                    ? "drop-shadow(0 0 5px rgba(255,255,255,0.75))"
+                    : "drop-shadow(0 0 0px rgba(255,255,255,0))",
+                  transition: "filter 0.3s ease",
+                }}
+              >
+                <path
+                  d="M12 4L5 18M12 4L19 18M12 4L12 12M5 18L12 12M19 18L12 12"
+                  stroke="#fff"
+                  strokeWidth="1.3"
+                  strokeOpacity="0.6"
+                  strokeLinecap="round"
+                />
+                <circle cx="12" cy="4" r="2.1" fill="#fff" />
+                <circle cx="5" cy="18" r="2.1" fill="#fff" />
+                <circle cx="19" cy="18" r="2.1" fill="#fff" />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="1.6"
+                  fill="#fff"
+                  opacity={brandHover ? 1 : 0.85}
+                  style={{ transition: "opacity 0.3s ease" }}
+                />
+              </svg>
             </a>
 
             {!isMobile && (
@@ -924,10 +920,6 @@ function RightRail({ theme, setTheme }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Activity Intelligence — now backed by GET /api/v1/activities (via the
-// local proxy). Falls back to static preview data if the fetch fails.
-// ---------------------------------------------------------------------------
 function ActivityIntelligence() {
   const [filter, setFilter] = useState("all");
   const [items, setItems] = useState(fallbackActivities);
@@ -1048,10 +1040,6 @@ function ActivityIntelligence() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Live projects — GET /api/v1/projects, falls back to static list on error.
-// Backend field names may differ slightly, so we read a few possible keys.
-// ---------------------------------------------------------------------------
 function useLiveProjects() {
   const [projects, setProjects] = useState(fallbackProjects);
 
@@ -1072,15 +1060,6 @@ function useLiveProjects() {
   return projects;
 }
 
-// ---------------------------------------------------------------------------
-// Shared chat state — hits POST /api/v1/assistant/query via the proxy.
-//
-// Every message now carries a `status`: "sending" | "sent" | "error".
-// Assistant replies that come from the offline fallback carry
-// status "offline" plus a `retryText`/`userMsgId` so the bubble can offer a
-// "Try live answer" button. Failed user messages carry status "error" plus
-// a "Resend" action. Every bubble also gets a "Copy" action.
-// ---------------------------------------------------------------------------
 function useAgentChat() {
   const [messages, setMessages] = useState([
     {
@@ -1125,8 +1104,6 @@ function useAgentChat() {
     return JSON.stringify(response);
   };
 
-  // Performs the actual API call for a given question, attached to the
-  // user bubble identified by userMsgId so success/failure can update it.
   const performSend = async (question, userMsgId) => {
     setThinking(true);
     try {
@@ -1163,8 +1140,6 @@ function useAgentChat() {
     }
   };
 
-  // Loads a previously-sent message into the composer for editing, instead
-  // of editing inline inside the bubble.
   const beginEdit = (message) => {
     if (thinking) return;
     setEditingId(message.id);
@@ -1178,12 +1153,6 @@ function useAgentChat() {
     setInput("");
   };
 
-  // Sends the composer text. If `text` is passed explicitly (e.g. a
-  // suggested-prompt click) it's always sent as a fresh message, and any
-  // in-progress edit is discarded. Otherwise, if a message is currently
-  // being edited, this saves the edit in place: it drops the old reply
-  // (successful or offline) attached to that message and resends the new
-  // text under the same message id.
   const send = async (text) => {
     if (text === undefined && editingId) {
       const value = input.trim();
@@ -1223,8 +1192,6 @@ function useAgentChat() {
     await performSend(question, userMsgId);
   };
 
-  // Resend a failed user message, or retry a stale/offline assistant
-  // bubble to get a live answer. Clears the old offline bubble first.
   const retry = async (message) => {
     if (thinking) return;
 
@@ -1274,11 +1241,6 @@ function useAgentChat() {
   };
 }
 
-// ---------------------------------------------------------------------------
-// A single chat bubble: renders markdown content plus a hover action bar
-// (copy) and, when relevant, a status row (sending / failed+resend /
-// offline+try-live).
-// ---------------------------------------------------------------------------
 function ChatBubble({
   message,
   thinking,
@@ -1417,9 +1379,6 @@ function ChatBubble({
 function AIPlayground({ chat }) {
   const scrollRef = useRef(null);
 
-  // Scroll to bottom right when the user sends a message (and when the
-  // typing indicator appears) — but not once the assistant's reply lands,
-  // so a long response doesn't yank the view down past its opening lines.
   useAutoScrollOnSend(scrollRef, chat.messages, chat.thinking);
 
   return (
@@ -1538,12 +1497,8 @@ function AIPlayground({ chat }) {
 function FloatingChatWidget({ open, setOpen, chat }) {
   const scrollRef = useRef(null);
 
-  // Same rule as the inline playground: snap to bottom on send / when the
-  // typing indicator shows up, but don't re-snap once the reply arrives.
   useAutoScrollOnSend(scrollRef, chat.messages, chat.thinking);
 
-  // When the panel is opened, jump straight to the latest message once so
-  // the user isn't dropped at the top of an old conversation.
   useEffect(() => {
     if (open && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -1821,7 +1776,6 @@ export default function PortfolioPage() {
     window.localStorage.setItem("portfolio-theme", theme);
   }, [theme]);
 
-  // Optional: ping /health once on load, just to log backend reachability
   useEffect(() => {
     getHealth().catch(() =>
       console.warn(
@@ -2070,9 +2024,6 @@ export default function PortfolioPage() {
       <FloatingChatWidget open={chatOpen} setOpen={setChatOpen} chat={chat} />
 
       <style jsx global>{`
-        /* ---------------------------------------------------------------
-           Chat components
-        --------------------------------------------------------------- */
         .chat-bubble-wrap {
           position: relative;
           display: flex;
@@ -2184,8 +2135,8 @@ export default function PortfolioPage() {
           opacity: 0.75;
         }
         .chat-badge-editing {
-          color: #6366f1;
-          background: rgba(99, 102, 241, 0.12);
+          color: var(--accent);
+          background: color-mix(in srgb, var(--accent) 12%, transparent);
         }
         .chat-editing-banner {
           display: flex;
@@ -2195,11 +2146,11 @@ export default function PortfolioPage() {
           padding: 6px 10px;
           margin-bottom: 4px;
           border-radius: 10px;
-          border: 1px solid rgba(99, 102, 241, 0.35);
-          background: rgba(99, 102, 241, 0.08);
+          border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+          background: color-mix(in srgb, var(--accent) 8%, transparent);
           font-size: 12px;
           font-weight: 600;
-          color: #6366f1;
+          color: var(--accent);
         }
         .chat-editing-banner span {
           display: inline-flex;
@@ -2220,7 +2171,7 @@ export default function PortfolioPage() {
           border-radius: 6px;
         }
         .chat-editing-cancel:hover {
-          background: rgba(99, 102, 241, 0.15);
+          background: color-mix(in srgb, var(--accent) 15%, transparent);
         }
       `}</style>
     </main>
