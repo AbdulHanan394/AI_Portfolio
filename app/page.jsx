@@ -1876,7 +1876,7 @@ export default function PortfolioPage() {
           <AIPlayground chat={chat} />
           <ActivityIntelligence />
 
-          <Section title="Posts">
+          {/* <Section title="Posts">
             <div className="tabs" aria-label="Activity filters">
               <button type="button" className="active">
                 Posts
@@ -1908,7 +1908,7 @@ export default function PortfolioPage() {
                 </article>
               ))}
             </Slider>
-          </Section>
+          </Section> */}
 
           <Section
             title="Projects"

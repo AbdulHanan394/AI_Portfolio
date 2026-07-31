@@ -1262,9 +1262,10 @@ small {
   border-radius: 8px;
   display: flex;
   flex-direction: column;
+  text-wrap: wrap;
   gap: 12px;
-  height: 320px;
-  overflow-x: hidden;
+  height: 420px;
+  overflow-x: auto;
   overflow-y: auto;
   padding: 16px;
 }
