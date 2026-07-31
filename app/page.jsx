@@ -1,5 +1,6 @@
 "use client";
 import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   forwardRef,
   useEffect,
@@ -1274,6 +1275,7 @@ function ChatBubble({
         <div className="chat-bubble-wrap">
           <div className="markdown-content">
             <Markdown
+              remarkPlugins={[remarkGfm]}
               components={{
                 a: ({ node, ...props }) => (
                   <a
@@ -1282,6 +1284,30 @@ function ChatBubble({
                     target="_blank"
                     rel="noopener noreferrer"
                   />
+                ),
+
+                table: ({ children }) => (
+                  <div className="overflow-x-auto my-4">
+                    <table className="min-w-full border border-gray-700 rounded-lg">
+                      {children}
+                    </table>
+                  </div>
+                ),
+
+                thead: ({ children }) => (
+                  <thead className="bg-gray-800">{children}</thead>
+                ),
+
+                th: ({ children }) => (
+                  <th className="border border-gray-700 px-4 py-2 text-left font-semibold">
+                    {children}
+                  </th>
+                ),
+
+                td: ({ children }) => (
+                  <td className="border border-gray-700 px-4 py-2 align-top">
+                    {children}
+                  </td>
                 ),
               }}
             >
