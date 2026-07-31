@@ -1,6 +1,5 @@
 "use client";
 import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import {
   forwardRef,
   useEffect,
@@ -1027,7 +1026,6 @@ function ActivityIntelligence() {
                   </span>
                 ))}
               </div>
-
               <a
                 href={item.url}
                 target="_blank"
@@ -1275,7 +1273,6 @@ function ChatBubble({
         <div className="chat-bubble-wrap">
           <div className="markdown-content">
             <Markdown
-              remarkPlugins={[remarkGfm]}
               components={{
                 a: ({ node, ...props }) => (
                   <a
