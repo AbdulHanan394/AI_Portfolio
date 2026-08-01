@@ -1,8 +1,11 @@
 "use client";
 import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import mermaid from "mermaid";
 import {
   forwardRef,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -204,6 +207,282 @@ function Icon({ children }) {
     <span className="icon" aria-hidden="true">
       {children}
     </span>
+  );
+}
+
+/* -----------------------------------------------------------------------
+ * Mermaid diagram renderer
+ * Renders fenced ```mermaid code blocks coming back from the AI assistant
+ * as actual SVG diagrams instead of raw text. Kept in this file per request.
+ * --------------------------------------------------------------------- */
+
+let mermaidInitialized = false;
+let mermaidCurrentTheme = null;
+
+function ensureMermaidInitialized(theme) {
+  const mermaidTheme = theme === "light" ? "default" : "dark";
+  if (!mermaidInitialized || mermaidCurrentTheme !== mermaidTheme) {
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: "strict",
+      theme: mermaidTheme,
+      fontFamily: "inherit",
+    });
+    mermaidInitialized = true;
+    mermaidCurrentTheme = mermaidTheme;
+  }
+}
+
+function Mermaid({ chart, theme = "dark" }) {
+  const containerRef = useRef(null);
+  const rawId = useId().replace(/[:]/g, "");
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function render() {
+      setError(null);
+      try {
+        ensureMermaidInitialized(theme);
+        const { svg } = await mermaid.render(`mermaid-${rawId}`, chart.trim());
+        if (!cancelled && containerRef.current) {
+          containerRef.current.innerHTML = svg;
+        }
+      } catch (err) {
+        console.error("Mermaid render error:", err);
+        if (!cancelled) setError(err?.message || "Failed to render diagram");
+      }
+    }
+
+    if (chart && chart.trim()) render();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [chart, theme, rawId]);
+
+  if (error) {
+    return (
+      <div className="mermaid-error">
+        <AlertCircle size={14} />
+        <span>Couldn&apos;t render diagram: {error}</span>
+        <pre>{chart}</pre>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mermaid-wrap">
+      <div className="mermaid-diagram" ref={containerRef} />
+    </div>
+  );
+}
+
+/* -----------------------------------------------------------------------
+ * Live in-browser Python execution (Pyodide)
+ * Renders fenced ```python code blocks with a Run button. Executing runs
+ * real Python — including matplotlib — inside a sandboxed WebAssembly
+ * runtime in the visitor's own tab. Nothing leaves the browser and it
+ * can't touch the filesystem or network. Pyodide + matplotlib are loaded
+ * lazily, on first "Run" click, and cached for the rest of the session.
+ * --------------------------------------------------------------------- */
+
+const PYODIDE_VERSION = "0.26.1";
+const PYODIDE_CDN_BASE = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
+
+let pyodideLoadPromise = null;
+
+function loadPyodideScriptTag() {
+  if (typeof window === "undefined")
+    return Promise.reject(new Error("No window"));
+  if (window.loadPyodide) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(
+      'script[data-pyodide-loader="true"]',
+    );
+    if (existing) {
+      existing.addEventListener("load", () => resolve());
+      existing.addEventListener("error", () =>
+        reject(new Error("Failed to load Pyodide script")),
+      );
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = `${PYODIDE_CDN_BASE}pyodide.js`;
+    script.async = true;
+    script.dataset.pyodideLoader = "true";
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Failed to load Pyodide script"));
+    document.head.appendChild(script);
+  });
+}
+
+// Returns a shared, cached Pyodide instance (with matplotlib/numpy
+// preloaded) for the whole tab. Only the first caller pays the cold-start
+// cost; everyone after gets the same warm instance.
+function getSharedPyodide(onStatus) {
+  if (!pyodideLoadPromise) {
+    pyodideLoadPromise = (async () => {
+      onStatus?.("Downloading Python runtime…");
+      await loadPyodideScriptTag();
+      const pyodide = await window.loadPyodide({ indexURL: PYODIDE_CDN_BASE });
+      onStatus?.("Installing matplotlib & numpy…");
+      await pyodide.loadPackage(["matplotlib", "numpy"]);
+      return pyodide;
+    })().catch((err) => {
+      // Allow retrying on failure instead of caching a broken promise forever.
+      pyodideLoadPromise = null;
+      throw err;
+    });
+  }
+  return pyodideLoadPromise;
+}
+
+function indentPythonBlock(code) {
+  return code
+    .split("\n")
+    .map((line) => "    " + line)
+    .join("\n");
+}
+
+function PythonRunner({ code }) {
+  const [status, setStatus] = useState("idle"); // idle | loading | running | done | error
+  const [statusMessage, setStatusMessage] = useState("");
+  const [images, setImages] = useState([]);
+  const [stdout, setStdout] = useState("");
+  const [error, setError] = useState(null);
+  const [showCode, setShowCode] = useState(true);
+
+  const isBusy = status === "loading" || status === "running";
+
+  const run = async () => {
+    setStatus("loading");
+    setError(null);
+    setImages([]);
+    setStdout("");
+
+    try {
+      const pyodide = await getSharedPyodide((msg) => setStatusMessage(msg));
+      setStatus("running");
+      setStatusMessage("Running…");
+
+      // Force a non-interactive backend, capture stdout, and collect any
+      // matplotlib figures the user's code opened as base64 PNGs.
+      const wrapped = `
+import io, base64, json, sys
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
+__stdout_buf = io.StringIO()
+__real_stdout = sys.stdout
+sys.stdout = __stdout_buf
+__error = None
+
+try:
+${indentPythonBlock(code)}
+except Exception as __exc:
+    __error = f"{type(__exc).__name__}: {__exc}"
+finally:
+    sys.stdout = __real_stdout
+
+__images = []
+for __fignum in plt.get_fignums():
+    __fig = plt.figure(__fignum)
+    __buf = io.BytesIO()
+    __fig.savefig(__buf, format="png", bbox_inches="tight", dpi=140)
+    __buf.seek(0)
+    __images.append(base64.b64encode(__buf.read()).decode("utf-8"))
+plt.close("all")
+
+json.dumps({"images": __images, "stdout": __stdout_buf.getvalue(), "error": __error})
+`;
+
+      const resultJson = await pyodide.runPythonAsync(wrapped);
+      const result = JSON.parse(resultJson);
+
+      if (result.error) {
+        setError(result.error);
+        setStatus("error");
+      } else {
+        setImages(result.images || []);
+        setStdout(result.stdout || "");
+        setStatus("done");
+      }
+    } catch (err) {
+      console.error("Pyodide execution failed:", err);
+      setError(err?.message || String(err));
+      setStatus("error");
+    }
+  };
+
+  return (
+    <div className="py-runner">
+      <div className="py-runner-head">
+        <span className="py-runner-label">
+          <Sparkles size={12} />
+          Python (runs in your browser)
+        </span>
+        <div className="py-runner-actions">
+          <button
+            type="button"
+            className="py-mini-btn"
+            onClick={() => setShowCode((v) => !v)}
+          >
+            {showCode ? "Hide code" : "Show code"}
+          </button>
+          <button
+            type="button"
+            className="py-run-btn"
+            onClick={run}
+            disabled={isBusy}
+          >
+            {isBusy ? (
+              <>
+                <RefreshCw size={12} className="py-spin" />
+                {statusMessage || "Working…"}
+              </>
+            ) : status === "done" ? (
+              <>
+                <RefreshCw size={12} />
+                Run again
+              </>
+            ) : (
+              <>▶ Run</>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {showCode && (
+        <pre className="py-code-block">
+          <code>{code}</code>
+        </pre>
+      )}
+
+      {status === "error" && (
+        <div className="py-error">
+          <AlertCircle size={13} />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {stdout && <pre className="py-stdout">{stdout}</pre>}
+
+      {images.length > 0 && (
+        <div className="py-images">
+          {images.map((b64, i) => (
+            <img
+              key={i}
+              src={`data:image/png;base64,${b64}`}
+              alt={`Python output ${i + 1}`}
+              className="py-output-image"
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1251,6 +1530,7 @@ function ChatBubble({
   onStartEdit,
   copied,
   editingId,
+  theme,
 }) {
   const isFailed = message.status === "error";
   const isOffline = message.status === "offline";
@@ -1273,6 +1553,7 @@ function ChatBubble({
         <div className="chat-bubble-wrap">
           <div className="markdown-content">
             <Markdown
+              remarkPlugins={[remarkGfm]}
               components={{
                 a: ({ node, ...props }) => (
                   <a
@@ -1284,28 +1565,39 @@ function ChatBubble({
                 ),
 
                 table: ({ children }) => (
-                  <div className="overflow-x-auto my-4">
-                    <table className="min-w-full border border-gray-700 rounded-lg">
-                      {children}
-                    </table>
+                  <div className="markdown-table-wrap">
+                    <table className="markdown-table">{children}</table>
                   </div>
                 ),
 
-                thead: ({ children }) => (
-                  <thead className="bg-gray-800">{children}</thead>
-                ),
+                thead: ({ children }) => <thead>{children}</thead>,
 
-                th: ({ children }) => (
-                  <th className="border border-gray-700 px-4 py-2 text-left font-semibold">
-                    {children}
-                  </th>
-                ),
+                th: ({ children }) => <th>{children}</th>,
 
-                td: ({ children }) => (
-                  <td className="border border-gray-700 px-4 py-2 align-top">
-                    {children}
-                  </td>
-                ),
+                td: ({ children }) => <td>{children}</td>,
+
+                // Intercept fenced code blocks. If the language is
+                // "mermaid", render an actual diagram instead of a
+                // plain <code> block.
+                code: ({ className, children, ...props }) => {
+                  const match = /language-(\w+)/.exec(className || "");
+                  const lang = match?.[1];
+                  const raw = String(children).replace(/\n$/, "");
+
+                  if (lang === "mermaid") {
+                    return <Mermaid chart={raw} theme={theme} />;
+                  }
+
+                  if (lang === "python" || lang === "py") {
+                    return <PythonRunner code={raw} />;
+                  }
+
+                  return (
+                    <code className={className} {...props}>
+                      {children}
+                    </code>
+                  );
+                },
               }}
             >
               {message.content}
@@ -1402,7 +1694,7 @@ function ChatBubble({
   );
 }
 
-function AIPlayground({ chat }) {
+function AIPlayground({ chat, theme }) {
   const scrollRef = useRef(null);
 
   useAutoScrollOnSend(scrollRef, chat.messages, chat.thinking);
@@ -1436,6 +1728,7 @@ function AIPlayground({ chat }) {
               onStartEdit={chat.beginEdit}
               editingId={chat.editingId}
               copied={chat.copiedId === m.id}
+              theme={theme}
             />
           ))}
           {chat.thinking && (
@@ -1520,7 +1813,7 @@ function AIPlayground({ chat }) {
   );
 }
 
-function FloatingChatWidget({ open, setOpen, chat }) {
+function FloatingChatWidget({ open, setOpen, chat, theme }) {
   const scrollRef = useRef(null);
 
   useAutoScrollOnSend(scrollRef, chat.messages, chat.thinking);
@@ -1573,6 +1866,7 @@ function FloatingChatWidget({ open, setOpen, chat }) {
                 onStartEdit={chat.beginEdit}
                 editingId={chat.editingId}
                 copied={chat.copiedId === m.id}
+                theme={theme}
               />
             ))}
             {chat.thinking && (
@@ -1870,7 +2164,7 @@ export default function PortfolioPage() {
             </p>
           </Section>
 
-          <AIPlayground chat={chat} />
+          <AIPlayground chat={chat} theme={theme} />
           <ActivityIntelligence />
 
           {/* <Section title="Posts">
@@ -2049,7 +2343,12 @@ export default function PortfolioPage() {
         <RightRail theme={theme} setTheme={setTheme} />
       </div>
 
-      <FloatingChatWidget open={chatOpen} setOpen={setChatOpen} chat={chat} />
+      <FloatingChatWidget
+        open={chatOpen}
+        setOpen={setChatOpen}
+        chat={chat}
+        theme={theme}
+      />
 
       <style jsx global>{`
         .chat-bubble-wrap {
@@ -2200,6 +2499,249 @@ export default function PortfolioPage() {
         }
         .chat-editing-cancel:hover {
           background: color-mix(in srgb, var(--accent) 15%, transparent);
+        }
+
+        /* Mermaid diagram styling */
+        .mermaid-wrap {
+          margin: 10px 0;
+          padding: 12px;
+          border-radius: 12px;
+          border: 1px solid var(--line);
+          background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+          overflow-x: auto;
+        }
+        .mermaid-diagram {
+          display: flex;
+          justify-content: center;
+          min-width: max-content;
+        }
+        .mermaid-diagram svg {
+          max-width: none;
+          height: auto;
+        }
+        .mermaid-error {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          padding: 10px 12px;
+          border-radius: 10px;
+          border: 1px solid rgba(239, 68, 68, 0.35);
+          background: rgba(239, 68, 68, 0.08);
+          color: #ef4444;
+          font-size: 12px;
+        }
+        .mermaid-error pre {
+          white-space: pre-wrap;
+          font-size: 11px;
+          opacity: 0.8;
+          margin: 0;
+        }
+
+        /* Prevent wide content (tables, long code, diagrams) from
+           blowing out the chat bubble / floating panel width. Flex
+           children default to min-width:auto, which lets oversized
+           content force the whole chain wider instead of scrolling
+           inside its own box. */
+        .chat-message {
+          min-width: 0;
+        }
+        .chat-bubble-wrap {
+          min-width: 0;
+          max-width: 100%;
+        }
+        .markdown-content {
+          min-width: 0;
+          max-width: 100%;
+          overflow-x: hidden;
+        }
+
+        /* Markdown table styling — follows the light/dark theme vars */
+        .markdown-table-wrap {
+          margin: 10px 0;
+          max-width: 100%;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          border-radius: 12px;
+          border: 1px solid var(--line);
+        }
+        .markdown-table {
+          width: max-content;
+          min-width: 100%;
+          border-collapse: collapse;
+          font-size: 13px;
+        }
+        .markdown-table thead {
+          background: var(--surface-3);
+        }
+        .markdown-table th,
+        .markdown-table td {
+          padding: 8px 12px;
+          text-align: left;
+          vertical-align: top;
+          border-bottom: 1px solid var(--line);
+          border-right: 1px solid var(--line);
+          white-space: nowrap;
+        }
+        .markdown-table td {
+          white-space: normal;
+        }
+        .markdown-table th:last-child,
+        .markdown-table td:last-child {
+          border-right: none;
+        }
+        .markdown-table tr:last-child td {
+          border-bottom: none;
+        }
+        .markdown-table th {
+          font-weight: 600;
+          color: var(--text);
+        }
+        .markdown-table td {
+          color: var(--text);
+          opacity: 0.9;
+        }
+        .markdown-table tbody tr:hover {
+          background: color-mix(in srgb, var(--accent) 6%, transparent);
+        }
+
+        /* Safety net: whatever the panel's own width is set to
+           elsewhere, never let its contents force it wider. */
+        .floating-chat-panel,
+        .chat-window,
+        .chat-shell {
+          max-width: 100%;
+          overflow-x: hidden;
+        }
+
+        /* Live Python (Pyodide) runner */
+        .py-runner {
+          margin: 10px 0;
+          border-radius: 12px;
+          border: 1px solid var(--line);
+          background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+          overflow: hidden;
+        }
+        .py-runner-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          padding: 8px 10px;
+          border-bottom: 1px solid var(--line);
+          background: var(--surface-3);
+          flex-wrap: wrap;
+        }
+        .py-runner-label {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 0.02em;
+          color: var(--text);
+          opacity: 0.75;
+        }
+        .py-runner-actions {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .py-mini-btn {
+          font-size: 11px;
+          font-weight: 600;
+          padding: 4px 9px;
+          border-radius: 999px;
+          border: 1px solid rgba(148, 163, 184, 0.4);
+          background: transparent;
+          color: inherit;
+          cursor: pointer;
+        }
+        .py-mini-btn:hover {
+          background: rgba(148, 163, 184, 0.15);
+        }
+        .py-run-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 11px;
+          font-weight: 700;
+          padding: 5px 12px;
+          border-radius: 999px;
+          border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+          background: color-mix(in srgb, var(--accent) 14%, transparent);
+          color: var(--accent);
+          cursor: pointer;
+          transition: background 0.15s ease;
+        }
+        .py-run-btn:hover:not(:disabled) {
+          background: color-mix(in srgb, var(--accent) 22%, transparent);
+        }
+        .py-run-btn:disabled {
+          opacity: 0.7;
+          cursor: default;
+        }
+        .py-spin {
+          animation: py-spin-anim 0.8s linear infinite;
+        }
+        @keyframes py-spin-anim {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        .py-code-block {
+          margin: 0;
+          padding: 10px 12px;
+          max-width: 100%;
+          overflow-x: auto;
+          font-size: 12px;
+          line-height: 1.5;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+          color: var(--text);
+          opacity: 0.9;
+          white-space: pre;
+        }
+        .py-error {
+          display: flex;
+          align-items: flex-start;
+          gap: 6px;
+          margin: 0 10px 10px;
+          padding: 8px 10px;
+          border-radius: 8px;
+          border: 1px solid rgba(239, 68, 68, 0.35);
+          background: rgba(239, 68, 68, 0.08);
+          color: #ef4444;
+          font-size: 12px;
+          white-space: pre-wrap;
+        }
+        .py-stdout {
+          margin: 0 10px 10px;
+          padding: 8px 10px;
+          border-radius: 8px;
+          border: 1px solid var(--line);
+          background: color-mix(in srgb, var(--surface) 70%, transparent);
+          font-size: 12px;
+          max-width: calc(100% - 20px);
+          overflow-x: auto;
+          white-space: pre-wrap;
+          color: var(--text);
+        }
+        .py-images {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          padding: 0 10px 10px;
+          max-width: 100%;
+          overflow-x: auto;
+        }
+        .py-output-image {
+          max-width: 100%;
+          height: auto;
+          border-radius: 8px;
+          border: 1px solid var(--line);
+          background: #fff;
         }
       `}</style>
     </main>
