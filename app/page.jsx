@@ -2556,8 +2556,10 @@ export default function PortfolioPage() {
         }
 
         /* Markdown table styling — follows the light/dark theme vars */
+        /* Markdown table styling — follows the light/dark theme vars */
         .markdown-table-wrap {
           margin: 10px 0;
+          width: 100%;
           max-width: 100%;
           overflow-x: auto;
           -webkit-overflow-scrolling: touch;
@@ -2565,8 +2567,8 @@ export default function PortfolioPage() {
           border: 1px solid var(--line);
         }
         .markdown-table {
-          width: max-content;
-          min-width: 100%;
+          width: 100%;
+          table-layout: auto;
           border-collapse: collapse;
           font-size: 13px;
         }
@@ -2580,10 +2582,9 @@ export default function PortfolioPage() {
           vertical-align: top;
           border-bottom: 1px solid var(--line);
           border-right: 1px solid var(--line);
-          white-space: nowrap;
-        }
-        .markdown-table td {
-          white-space: normal;
+          white-space: normal; /* was nowrap — this was the main culprit */
+          word-break: break-word;
+          overflow-wrap: anywhere;
         }
         .markdown-table th:last-child,
         .markdown-table td:last-child {
@@ -2602,6 +2603,14 @@ export default function PortfolioPage() {
         }
         .markdown-table tbody tr:hover {
           background: color-mix(in srgb, var(--accent) 6%, transparent);
+        }
+
+        /* Let messages containing a table breathe wider than plain-text bubbles */
+        .chat-message:has(.markdown-table-wrap) {
+          max-width: min(680px, 94%) !important;
+        }
+        .floating-chat-panel:has(.markdown-table-wrap) {
+          width: min(520px, 94vw) !important;
         }
 
         /* Safety net: whatever the panel's own width is set to
