@@ -263,16 +263,6 @@ function Mermaid({ chart, theme = "dark" }) {
     };
   }, [chart, theme, rawId]);
 
-  if (error) {
-    return (
-      <div className="mermaid-error">
-        <AlertCircle size={14} />
-        <span>Couldn&apos;t render diagram: {error}</span>
-        <pre>{chart}</pre>
-      </div>
-    );
-  }
-
   return (
     <div className="mermaid-wrap">
       <div className="mermaid-diagram" ref={containerRef} />
@@ -2167,40 +2157,6 @@ export default function PortfolioPage() {
 
           <AIPlayground chat={chat} theme={theme} />
           <ActivityIntelligence />
-
-          {/* <Section title="Posts">
-            <div className="tabs" aria-label="Activity filters">
-              <button type="button" className="active">
-                Posts
-              </button>
-            </div>
-            <Slider ariaLabel="Recent posts">
-              {activities.map((activity) => (
-                <article
-                  className="activity-card slide-item"
-                  key={activity.title}
-                >
-                  <div className="activity-head">
-                    <span className="mini-avatar avatar-photo" />
-                    <div>
-                      <strong>{profile.name}</strong>
-                      <p>{activity.tag}</p>
-                    </div>
-                  </div>
-                  <h3>{activity.title}</h3>
-                  <p>{activity.text}</p>
-                  <a
-                    href="https://www.linkedin.com/in/abdulhanan394"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="linkedin-btn"
-                  >
-                    View on LinkedIn →
-                  </a>
-                </article>
-              ))}
-            </Slider>
-          </Section> */}
 
           <Section
             title="Projects"
