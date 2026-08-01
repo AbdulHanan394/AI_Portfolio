@@ -436,7 +436,6 @@ small {
   border-color: var(--green);
   color: #052217;
 }
-
 .activity-grid,
 .project-list,
 .interest-grid {
@@ -444,7 +443,8 @@ small {
   gap: 14px;
 }
 
-.activity-grid {
+.activity-grid,
+.project-list {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -456,6 +456,12 @@ small {
   border-radius: 8px;
   min-width: 0;
   padding: 16px;
+}
+
+.project-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .activity-head,
@@ -474,6 +480,12 @@ small {
 .project-card h3 {
   font-size: 17px;
   margin-bottom: 7px;
+}
+
+@media (max-width: 720px) {
+  .project-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 .post-art {
@@ -1273,7 +1285,7 @@ small {
 .chat-message {
   display: flex;
   gap: 8px;
-  max-width: 82%;
+  max-width: 92%;
 }
 
 .chat-message p {
@@ -1291,6 +1303,7 @@ small {
 .chat-message.assistant p {
   background: var(--surface);
   border: 1px solid var(--line);
+  max-width: 100%;
   border-top-left-radius: 4px;
   color: var(--text);
 }
@@ -1531,7 +1544,7 @@ button.outline-pill {
   max-height: min(70vh, 540px);
   overflow: hidden;
   transform-origin: bottom right;
-  width: min(370px, calc(100vw - 40px));
+  width: min(440px, calc(100vw - 40px));
 }
 
 @keyframes floating-chat-in {

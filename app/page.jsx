@@ -64,21 +64,6 @@ const stats = [
   ["Search appearances", "500", "How often you appear in recruiter searches."],
 ];
 
-const activities = [
-  {
-    title: "BERT vs GPT",
-    text: "A breakdown of transformer architecture and where each model family shines in modern AI workflows.",
-    tag: "AI Notes",
-    image: "/linkedin-page.png",
-  },
-  {
-    title: "Activation Functions",
-    text: "Why Tanh, ReLU, Sigmoid, and Softmax matter when building neural network intuition.",
-    tag: "Deep Learning",
-    image: "/linkedin-page.png",
-  },
-];
-
 const fallbackActivities = [
   {
     id: "a1",
@@ -133,8 +118,24 @@ const fallbackProjects = [
     ],
     link: "https://focusspark-frontend.vercel.app/",
   },
+  {
+    title: "Dynamic AI Portfolio",
+    meta: "Personal Portfolio • 2026",
+    text: "Built this portfolio as a live AI-powered platform rather than a static page — an Abdul Core RAG backend grounds a chat assistant in real project and activity data, with in-response Mermaid diagrams and live in-browser Python execution (via Pyodide) rendered directly inside the chat.",
+    stack: [
+      "Next.js",
+      "React",
+      "FastAPI",
+      "PostgreSQL",
+      "ChromaDB",
+      "RAG",
+      "LangChain",
+      "Mermaid",
+      "Pyodide",
+    ],
+    link: "https://abdulhanan394.netlify.app/",
+  },
 ];
-
 const sourceMeta = {
   github: {
     label: "GitHub",
@@ -2555,7 +2556,59 @@ export default function PortfolioPage() {
           overflow-x: hidden;
         }
 
-        /* Markdown table styling — follows the light/dark theme vars */
+        /* Assistant replies get real room to breathe — the 82% cap from
+           the base .chat-message rule was leaving a dead gap on the right
+           for anything with headings/lists/tables. User bubbles stay
+           compact and right-aligned. */
+        .chat-message.assistant {
+          max-width: 96%;
+        }
+        .chat-message.user {
+          max-width: 82%;
+        }
+
+        /* One card background for the whole assistant response instead of
+           one box per <p>/<h3> inside it — this is what was causing the
+           "boxed header" look, since the base CSS applies the bubble
+           background to every <p> tag markdown renders. */
+        .chat-message.assistant .markdown-content {
+          background: var(--surface);
+          border: 1px solid var(--line);
+          border-radius: 12px;
+          border-top-left-radius: 4px;
+          padding: 12px 16px;
+          color: var(--text);
+        }
+        .chat-message.assistant .markdown-content p {
+          background: none;
+          border: none;
+          border-radius: 0;
+          padding: 0;
+        }
+        .floating-chat-window .chat-message.assistant .markdown-content {
+          background: var(--surface-2);
+        }
+
+        /* De-box headings inside markdown responses — plain bold text */
+        .markdown-content h1,
+        .markdown-content h2,
+        .markdown-content h3,
+        .markdown-content h4 {
+          background: none;
+          border: none;
+          box-shadow: none;
+          padding: 0;
+          font-weight: 800;
+          line-height: 1.3;
+        }
+        .markdown-content h3 {
+          font-size: 15px;
+        }
+        .markdown-content h4 {
+          font-size: 14px;
+          color: var(--accent);
+        }
+
         /* Markdown table styling — follows the light/dark theme vars */
         .markdown-table-wrap {
           margin: 10px 0;
@@ -2568,7 +2621,8 @@ export default function PortfolioPage() {
         }
         .markdown-table {
           width: 100%;
-          table-layout: auto;
+          min-width: 480px;
+          table-layout: fixed;
           border-collapse: collapse;
           font-size: 13px;
         }
@@ -2582,9 +2636,10 @@ export default function PortfolioPage() {
           vertical-align: top;
           border-bottom: 1px solid var(--line);
           border-right: 1px solid var(--line);
-          white-space: normal; /* was nowrap — this was the main culprit */
-          word-break: break-word;
-          overflow-wrap: anywhere;
+          white-space: normal;
+          word-break: normal;
+          overflow-wrap: break-word;
+          min-width: 90px;
         }
         .markdown-table th:last-child,
         .markdown-table td:last-child {
@@ -2607,10 +2662,10 @@ export default function PortfolioPage() {
 
         /* Let messages containing a table breathe wider than plain-text bubbles */
         .chat-message:has(.markdown-table-wrap) {
-          max-width: min(680px, 94%) !important;
+          max-width: min(760px, 96%) !important;
         }
         .floating-chat-panel:has(.markdown-table-wrap) {
-          width: min(520px, 94vw) !important;
+          width: min(600px, 96vw) !important;
         }
 
         /* Safety net: whatever the panel's own width is set to
@@ -2620,6 +2675,11 @@ export default function PortfolioPage() {
         .chat-shell {
           max-width: 100%;
           overflow-x: hidden;
+        }
+
+        /* Widen the docked panel a bit for structured responses */
+        .floating-chat-panel {
+          width: min(440px, calc(100vw - 40px));
         }
 
         /* Live Python (Pyodide) runner */
@@ -2751,6 +2811,67 @@ export default function PortfolioPage() {
           border-radius: 8px;
           border: 1px solid var(--line);
           background: #fff;
+        }
+
+        /* ---------- Mobile adjustments ---------- */
+        @media (max-width: 680px) {
+          .chat-message.assistant,
+          .chat-message.user {
+            max-width: 94%;
+          }
+          .chat-message:has(.markdown-table-wrap) {
+            max-width: 98% !important;
+          }
+          .chat-message.assistant .markdown-content {
+            padding: 10px 12px;
+            font-size: 13.5px;
+          }
+          .markdown-content h3 {
+            font-size: 14px;
+          }
+          .markdown-content h4 {
+            font-size: 13px;
+          }
+          .markdown-table {
+            min-width: 420px;
+            font-size: 12px;
+          }
+          .markdown-table th,
+          .markdown-table td {
+            padding: 6px 9px;
+            min-width: 70px;
+          }
+          .py-runner-head {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
+          }
+          .py-runner-actions {
+            width: 100%;
+            justify-content: space-between;
+          }
+          .py-code-block {
+            font-size: 11px;
+          }
+          .py-output-image {
+            width: 100%;
+          }
+        }
+
+        @media (max-width: 430px) {
+          .floating-chat-panel {
+            width: calc(100vw - 24px) !important;
+          }
+          .floating-chat-panel:has(.markdown-table-wrap) {
+            width: calc(100vw - 24px) !important;
+          }
+          .chat-message.assistant .markdown-content {
+            padding: 9px 10px;
+            font-size: 13px;
+          }
+          .markdown-table {
+            min-width: 360px;
+          }
         }
       `}</style>
     </main>
